@@ -31,7 +31,6 @@ opcion = st.sidebar.radio("Módulos Disponibles", [
     "9. Formulario"
 ])
 
-# Solo mostramos el título principal si NO estamos en la portada
 if opcion != "0. Portada e Índice":
     st.markdown('<div class="main-title">Calculadora Financiera y Actuarial</div>', unsafe_allow_html=True)
 
@@ -80,27 +79,26 @@ if opcion == "0. Portada e Índice":
         st.success("**9. Formulario Oficial**\n\nCheat-sheet descargable en HTML con todas las ecuaciones matemáticas utilizadas.")
 
 
-# =============================================================================
+    # =============================================================================
     # Pie de página: Comentarios, Sugerencias y Uso Local
     # =============================================================================
     st.write("---")
     
     # Sección de Uso Local (GitHub)
-    st.info("💡 **Recomendación para uso sin límites:** Si experimentas lentitud por saturación del servidor, te recomendamos descargar el código fuente y ejecutar la calculadora de forma local en tu computadora.")
-    st.markdown("<p style='text-align: center; font-size: 1.1em;'>🖥️ <b><a href='https://github.com/tu-usuario/tu-repositorio' target='_blank' style='text-decoration: none; color: #1E3A8A;'>Descargar desde GitHub</a></b></p>", unsafe_allow_html=True)
+    st.info(" **Recomendación para uso sin límites:** Si experimentas lentitud por saturación del servidor, te recomendamos descargar el código fuente y ejecutar la calculadora de forma local en tu computadora.")
+    st.markdown("<p style='text-align: center; font-size: 1.1em;'> <b><a href='https://github.com/Walls16/calculadora-actuarial' target='_blank' style='text-decoration: none; color: #1E3A8A;'>Descargar desde GitHub</a></b></p>", unsafe_allow_html=True)
     
     st.write("---")
     
     # Sección de Contacto
     st.markdown("<p style='text-align: center; color: #64748B; font-size: 1.1em;'>¿Tienes comentarios, dudas o sugerencias para mejorar esta calculadora?</p>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.2em;'>📬 <b><a href='https://www.linkedin.com/in/owen-conde-a731b9249/' target='_blank' style='text-decoration: none; color: #2563EB;'>Contáctame en LinkedIn (Owen Paredes Conde)</a></b></p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-size: 1.2em;'> <b><a href='https://www.linkedin.com/in/owen-conde-a731b9249/' target='_blank' style='text-decoration: none; color: #2563EB;'>Contáctame en LinkedIn (Owen Paredes Conde)</a></b></p>", unsafe_allow_html=True)
 # =============================================================================
 # 1. TASAS
 # =============================================================================
 if opcion == "1. Tasas de Interés":
     st.markdown('<div class="section-header">1. Conversión de Tasas</div>', unsafe_allow_html=True)
     
-    # Creamos las 6 pestañas para coincidir al 100% con el Excel
     tabs = st.tabs([
         "Triple Igualdad", 
         "De i^(m) a i, δ", 
@@ -159,7 +157,6 @@ if opcion == "1. Tasas de Interés":
             
         with c2:
             i_nom_tab3 = engine.tasa_instantanea_a_nominal(d_tab3, m_tab3)
-            # Modificado para que siempre diga i^(m) estático, tal como pediste
             st.metric("Tasa Nominal $i^{(m)}$", f"{i_nom_tab3*100:.3f}%")
             st.latex(r"i^{(m)} = m \left(e^{\delta/m} - 1\right)")
 
@@ -175,7 +172,6 @@ if opcion == "1. Tasas de Interés":
             
         with c2:
             i_p = engine.tasa_nominal_m_a_nominal_p(i_orig, m_orig, p_dest)
-            # Modificado para que siempre diga i^(p) estático y muestre el resultado periódico
             st.metric("Tasa Nominal $i^{(p)}$", f"{i_p*100:.3f}%")
             st.latex(r"i^{(p)} = \left(1 + \frac{i^{(m)}}{m}\right)^{\frac{m}{p}} - 1")
 
@@ -193,7 +189,6 @@ if opcion == "1. Tasas de Interés":
         st.subheader("Tabla de Acumulación")
         df_reinversion = engine.generar_tabla_reinversion(C0, tasa_ref, n_anios)
         
-        # Le aplicamos formato de dólares al monto y porcentaje al rendimiento
         st.dataframe(
             df_reinversion.style.format({
                 "Monto acumulado": "${:,.2f}",
@@ -316,13 +311,11 @@ elif opcion == "2. Valor del Dinero":
                 formula_vp = r"VP = C_n (1+i)^{-n}"
                 
             elif escenario_vp == "Tasa nominal":
-                # Valores por defecto basados en tu Excel
                 Cn_vp = st.number_input("Valor Futuro ($C_n$)", min_value=0.0, value=1000.0, step=100.0, key="vp_cn_2")
                 i_nom_vp = st.number_input("Tasa nominal anual ($i^{(m)}$) %", value=10.0, step=0.1, key="vp_inom") / 100
                 n_vp2 = st.number_input("Años ($n$)", min_value=0.0, value=10.0, step=1.0, key="vp_n2")
                 m_vp = st.number_input("Periodos por año ($m$)", min_value=1.0, value=2.0, step=1.0, key="vp_m")
                 
-                # Ajuste clave: dividimos la nominal entre m para obtener la periódica (im)
                 im_vp = i_nom_vp / m_vp
                 
                 vp_res = engine.valor_presente(Cn_vp, im_vp, n_vp2 * m_vp)
@@ -360,10 +353,8 @@ elif opcion == "2. Valor del Dinero":
         st.write("---")
         st.markdown("#### Desglose del Tiempo Exacto")
         
-        # Asumiendo que el periodo calculado son Años (por la tasa efectiva anual)
         df_desglose = engine.desglosar_periodos(n_res)
         
-        # Mostrar como una tabla horizontal limpia
         st.dataframe(
             df_desglose.style.set_properties(**{
                 'background-color': '#F3F4F6',
@@ -416,7 +407,6 @@ elif opcion == "3. Rentas y Anualidades":
         # -----------------------------------------------------
         if tipo_renta_vf == "Rentas Constantes Periódicas":
             
-         # Selector de opciones con nombres optimizados y precisos
             escenario_const_vf = st.selectbox("Seleccione el escenario:", [
                 "Vencidas a una tasa efectiva im",
                 "Anticipadas a una tasa efectiva im",
@@ -463,10 +453,8 @@ elif opcion == "3. Rentas y Anualidades":
               # Caso 4: Instantáneas
                 elif escenario_const_vf == "Continuas a una tasa instantánea δ": 
                     
-                    # CORRECCIÓN: Agregamos la 'r' antes de las comillas para que \bar{R} se renderice perfecto
                     R_anual_vf = st.number_input(r"Flujo Anual Total ($\bar{R}$)", min_value=0.0, value=12000.0, step=1000.0, key="vf_rc_4")
                     
-                    # Agregamos la opción de usar i o delta
                     tipo_tasa_continua = st.radio("Ingresar tasa como:", ["Tasa instantánea ($\delta$)", "Tasa efectiva anual ($i$)"], horizontal=True, key="tipo_t_cont_vf")
                     
                     n_vf = st.number_input("Años ($n$)", min_value=0.0, value=5.0, step=1.0, key="vf_rc_n4")
@@ -477,10 +465,8 @@ elif opcion == "3. Rentas y Anualidades":
                         formula_latex = r"VF = \bar{R} \cdot \bar{s}_{\overline{n}|\delta} = \bar{R} \left[ \frac{e^{\delta n} - 1}{\delta} \right]"
                     else:
                         i_eff_vf = st.number_input("Tasa efectiva anual ($i$) %", value=10.51, step=0.1, key="vf_rc_ieff") / 100
-                        # Convertimos i a delta internamente
                         d_vf = np.log(1 + i_eff_vf) 
                         vf_res = engine.vf_anualidad_continua(R_anual_vf, d_vf, n_vf)
-                        # Mostramos la fórmula equivalente usando i
                         formula_latex = r"VF = \bar{R} \cdot \bar{s}_{\overline{n}|i} = \bar{R} \left[ \frac{(1+i)^n - 1}{\ln(1+i)} \right]"
             with c2:
                 st.metric("Valor Futuro Acumulado ($VF$)", f"${vf_res:,.3f}")
@@ -600,7 +586,6 @@ elif opcion == "3. Rentas y Anualidades":
             c1, c2 = st.columns(2)
             
             with c1:
-                # Caso 1: Vencidas a tasa efectiva im
                 if escenario_const_vp == "Vencidas a una tasa efectiva im":
                     R_vp = st.number_input("Pago periódico ($R$)", min_value=0.0, value=1000.0, step=100.0, key="vp_rc_1")
                     i_nom_vp = st.number_input("Tasa nominal anual ($i^{(m)}$) %", value=12.0, step=0.1, key="vp_rc_i1") / 100
@@ -611,7 +596,6 @@ elif opcion == "3. Rentas y Anualidades":
                     vp_res = engine.vp_anualidad_efectiva(R_vp, im_vp, n_vp * m_vp, anticipada=False)
                     formula_latex = r"VP = R \cdot a_{\overline{nm}|i_m} = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]"
                 
-                # Caso 2: Anticipadas a tasa efectiva im
                 elif escenario_const_vp == "Anticipadas a una tasa efectiva im":
                     R_vp = st.number_input("Pago periódico ($R$)", min_value=0.0, value=1000.0, step=100.0, key="vp_rc_2")
                     i_nom_vp = st.number_input("Tasa nominal anual ($i^{(m)}$) %", value=12.0, step=0.1, key="vp_rc_i2") / 100
@@ -622,7 +606,6 @@ elif opcion == "3. Rentas y Anualidades":
                     vp_res = engine.vp_anualidad_efectiva(R_vp, im_vp, n_vp * m_vp, anticipada=True)
                     formula_latex = r"VP = R \cdot \ddot{a}_{\overline{nm}|i_m} = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right] \left(1+\frac{i^{(m)}}{m}\right)"
                 
-                # Caso 3: Perpetuas a tasa efectiva im
                 elif escenario_const_vp == "Perpetuas a una tasa efectiva im":
                     R_vp = st.number_input("Pago periódico ($R$)", min_value=0.0, value=1000.0, step=100.0, key="vp_rc_perp")
                     i_nom_vp = st.number_input("Tasa nominal anual ($i^{(m)}$) %", value=12.0, step=0.1, key="vp_rc_i_perp") / 100
@@ -632,7 +615,6 @@ elif opcion == "3. Rentas y Anualidades":
                     vp_res = engine.vp_perpetuidad(R_vp, im_vp)
                     formula_latex = r"VP = R \cdot a_{\overline{\infty}|i_m} = \frac{R}{\frac{i^{(m)}}{m}}"
 
-                # Caso 4: Pagos p veces al año con tasa i(m)
                     st.info("El motor calcula automáticamente la tasa equivalente $i^{(p)}$ antes de valuar la renta.")
                     R_vp = st.number_input("Pago periódico ($R$)", min_value=0.0, value=1000.0, step=100.0, key="vp_rc_3")
                     i_nom_vp = st.number_input("Tasa nominal anual ($i^{(m)}$) %", value=12.0, step=0.1, key="vp_rc_inom") / 100
@@ -643,7 +625,6 @@ elif opcion == "3. Rentas y Anualidades":
                     vp_res = engine.vp_anualidad_nominal(R_vp, i_nom_vp, m_vp, p_vp, n_vp)
                     formula_latex = r"VP = R \cdot a_{\overline{np}|i_p} = R \left[ \frac{1 - \left(1+\frac{i^{(p)}}{p}\right)^{-np}}{\frac{i^{(p)}}{p}} \right]"
                 
-                # Caso 5: Instantáneas
                 elif escenario_const_vp == "Continuas a una tasa instantánea δ o efectiva i": 
                     R_anual_vp = st.number_input(r"Flujo Anual Total ($\bar{R}$)", min_value=0.0, value=12000.0, step=1000.0, key="vp_rc_4")
                     
@@ -692,7 +673,7 @@ elif opcion == "3. Rentas y Anualidades":
                     else:
                         formula_geo_vp = r"VP = \frac{nm \cdot R_1}{1+i_m}"
 
-                else: # Tasa nominal anual
+                else: 
                     i_nom_geo_vp = st.number_input("Tasa nominal anual de interés ($i^{(m)}$) %", value=12.0, step=0.1, key="vp_geo_i_nom") / 100
                     q_nom_geo_vp = st.number_input("Tasa nominal anual de crecimiento ($q^{(m)}$) %", value=5.0, step=0.1, key="vp_geo_q_nom") / 100
                     n_geo_vp = st.number_input("Años ($n$)", min_value=0.0, value=5.0, step=1.0, key="vp_geo_n_nom")
@@ -732,13 +713,13 @@ elif opcion == "3. Rentas y Anualidades":
                     im_arit_vp = st.number_input("Tasa efectiva periódica ($i_m$) %", value=1.0, step=0.1, key="vp_arit_ieff") / 100
                     n_arit_vp = st.number_input("Años ($n$)", min_value=0.0, value=5.0, step=1.0, key="vp_arit_n_eff")
                     m_arit_vp = st.number_input("Periodos por año ($m$)", min_value=1.0, value=12.0, step=1.0, key="vp_arit_m_eff")
-                    str_i_arit_vp = r"i_m" # Etiqueta dinámica para LaTeX
+                    str_i_arit_vp = r"i_m" 
                 else:
                     i_nom_arit_vp = st.number_input("Tasa nominal anual ($i^{(m)}$) %", value=12.0, step=0.1, key="vp_arit_inom") / 100
                     n_arit_vp = st.number_input("Años ($n$)", min_value=0.0, value=5.0, step=1.0, key="vp_arit_n_nom")
                     m_arit_vp = st.number_input("Periodos por año ($m$)", min_value=1.0, value=12.0, step=1.0, key="vp_arit_m_nom")
                     im_arit_vp = i_nom_arit_vp / m_arit_vp
-                    str_i_arit_vp = r"\frac{i^{(m)}}{m}" # Etiqueta dinámica para LaTeX
+                    str_i_arit_vp = r"\frac{i^{(m)}}{m}" 
                     
                 nm_arit_vp = n_arit_vp * m_arit_vp
                 
@@ -746,7 +727,6 @@ elif opcion == "3. Rentas y Anualidades":
                 vp_res_arit = engine.vp_gradiente_aritmetico(R1_arit_vp, G_vp, im_arit_vp, nm_arit_vp)
                 st.metric("Valor Presente ($VP$)", f"${vp_res_arit:,.2f}")
                 
-                # Fórmula de LaTeX dinámica
                 formula_arit_vp = r"VP = R_1 \left[ \frac{1 - (1+" + str_i_arit_vp + r")^{-nm}}{" + str_i_arit_vp + r"} \right] + \frac{G}{" + str_i_arit_vp + r"} \left[ \frac{1 - (1+" + str_i_arit_vp + r")^{-nm}}{" + str_i_arit_vp + r"} - nm(1+" + str_i_arit_vp + r")^{-nm} \right]"
                 st.latex(formula_arit_vp)
     # =========================================================
@@ -763,14 +743,12 @@ elif opcion == "3. Rentas y Anualidades":
             
         st.write("---")
         
-        # --- NUEVO SELECTOR DE TASA ---
         tipo_tasa_n = st.radio("Ingresar tasas como:", ["Tasa efectiva periódica", "Tasa nominal anual"], horizontal=True, key="tipo_tasa_n")
         st.write("---")
         
         c3, c4 = st.columns(2)
         
         with c3:
-            # Pedimos la variable objetivo (VF o VP)
             if base_n == "Valor Futuro (Monto Acumulado)":
                 Meta = st.number_input("Valor Futuro Objetivo ($VF$)", min_value=0.01, value=50000.0, step=1000.0, key="n_meta_vf")
             else:
@@ -778,7 +756,6 @@ elif opcion == "3. Rentas y Anualidades":
                 
             R_n = st.number_input("Primer pago ($R_1$)", min_value=0.01, value=1000.0, step=100.0, key="n_pago")
             
-            # --- LÓGICA DE TASA EFECTIVA VS NOMINAL ---
             if tipo_tasa_n == "Tasa efectiva periódica":
                 im_n = st.number_input("Tasa efectiva periódica de interés ($i_m$) %", value=1.0, step=0.1, key="n_im_eff") / 100
                 m_n = st.number_input("Periodos por año ($m$)", min_value=1.0, value=12.0, step=1.0, help="Necesario para convertir el total de periodos a años exactos", key="n_m_eff")
@@ -786,7 +763,6 @@ elif opcion == "3. Rentas y Anualidades":
                 if tipo_renta_n == "Creciente Geométrica":
                     qm_n = st.number_input("Tasa efectiva periódica de crecimiento ($q_m$) %", value=0.5, step=0.1, key="n_qm_eff") / 100
                     
-            else: # Tasa nominal anual
                 i_nom_n = st.number_input("Tasa nominal anual de interés ($i^{(m)}$) %", value=12.0, step=0.1, key="n_inom") / 100
                 m_n = st.number_input("Periodos por año ($m$)", min_value=1.0, value=12.0, step=1.0, key="n_m_nom")
                 im_n = i_nom_n / m_n
@@ -795,17 +771,14 @@ elif opcion == "3. Rentas y Anualidades":
                     q_nom_n = st.number_input("Tasa nominal anual de crecimiento ($q^{(m)}$) %", value=5.0, step=0.1, key="n_qnom") / 100
                     qm_n = q_nom_n / m_n
 
-            # --- VARIABLE G PARA ARITMÉTICA ---
             if tipo_renta_n == "Creciente Aritmética":
                 G_n = st.number_input("Gradiente Aritmético ($G$)", value=50.0, step=10.0, help="Suma o resta fija por periodo", key="n_g")
             
         with c4:
             st.markdown("#### Resultados")
             
-            # Ejecutamos el motor correspondiente
             n_res_total = np.nan
             
-            # --- 1. CONSTANTE PERIÓDICA ---
             if tipo_renta_n == "Constante Periódica":
                 if base_n == "Valor Futuro (Monto Acumulado)":
                     n_res_total = engine.nper_anualidad_vf(Meta, R_n, im_n)
@@ -814,7 +787,6 @@ elif opcion == "3. Rentas y Anualidades":
                     n_res_total = engine.nper_anualidad_vp(Meta, R_n, im_n)
                     formula_latex = r"nm = \frac{-\ln\left(1 - \frac{VP \cdot i_m}{R}\right)}{\ln(1+i_m)}"
                     
-            # --- 2. CRECIENTE GEOMÉTRICA ---
             elif tipo_renta_n == "Creciente Geométrica":
                 if base_n == "Valor Futuro (Monto Acumulado)":
                     n_res_total = engine.nper_gradiente_geo_vf(Meta, R_n, im_n, qm_n)
@@ -823,7 +795,6 @@ elif opcion == "3. Rentas y Anualidades":
                     n_res_total = engine.nper_gradiente_geo_vp(Meta, R_n, im_n, qm_n)
                     formula_latex = r"nm \rightarrow \text{Resuelto numéricamente}"
                     
-            # --- 3. CRECIENTE ARITMÉTICA ---
             elif tipo_renta_n == "Creciente Aritmética":
                 if base_n == "Valor Futuro (Monto Acumulado)":
                     n_res_total = engine.nper_gradiente_arit_vf(Meta, R_n, G_n, im_n)
@@ -832,13 +803,11 @@ elif opcion == "3. Rentas y Anualidades":
                     n_res_total = engine.nper_gradiente_arit_vp(Meta, R_n, G_n, im_n)
                     formula_latex = r"nm \rightarrow \text{Resuelto numéricamente}"
                     
-            # Mostrar resultado
             if np.isnan(n_res_total):
                 st.error("El monto objetivo es inalcanzable con estos parámetros.")
             else:
                 st.metric("Total de Periodos ($nm$)", f"{n_res_total:.4f}")
                 
-                # Desglose en Años exactos (usando nm / m)
                 anios_decimal = n_res_total / m_n
                 st.metric("Años totales ($n$)", f"{anios_decimal:.4f} años")
                 st.latex(formula_latex)
@@ -881,7 +850,6 @@ elif opcion == "4. Tabla de Amortización":
             if modo_amort == "Calcular Pago Fijo (R) conociendo el Préstamo (VP)":
                 vp_bruto = st.number_input("Valor Total del Bien ($VP_{bruto}$)", min_value=0.01, value=500000.0, step=10000.0, key="am_vp_bruto")
                 
-                # Nuevo selector para el tipo de enganche
                 tipo_enganche = st.radio("Tipo de Enganche:", ["Monto fijo ($)", "Porcentaje (%)"], horizontal=True, key="tipo_eng")
                 
                 if tipo_enganche == "Monto fijo ($)":
@@ -892,10 +860,9 @@ elif opcion == "4. Tabla de Amortización":
                 
                 vp_am = vp_bruto - enganche
                 
-                # Validamos que no metan un enganche mayor o igual al valor del bien
                 if vp_am <= 0:
                     st.error("El enganche debe ser menor al valor total.")
-                    vp_am = 0.01 # Valor de seguridad para que no rompa la matemática
+                    vp_am = 0.01 
                 else:
                     st.success(f"Monto a financiar ($VP$ neto): **${vp_am:,.2f}**")
                     
@@ -912,7 +879,6 @@ elif opcion == "4. Tabla de Amortización":
         n_am = st.number_input("Años del préstamo ($n$)", min_value=0.1, value=5.0, step=1.0, key="am_n")
         m_am = st.number_input("Pagos por año ($m$)", min_value=1.0, value=12.0, step=1.0, key="am_m")
 
-    # Cálculos de tasas y periodos
     nm_am = int(n_am * m_am)
     
     if tipo_tasa_amort == "Tasa efectiva periódica":
@@ -971,7 +937,6 @@ elif opcion == "4. Tabla de Amortización":
     tab_tabla, tab_grafica = st.tabs(["Tabla Detallada", "Gráfica de Composición"])
         
     with tab_tabla:
-            # Formateamos las nuevas columnas
             st.dataframe(
                 df_amort.style.format({
                     "Saldo Inicial": "${:,.2f}",
@@ -985,7 +950,6 @@ elif opcion == "4. Tabla de Amortización":
             
     with tab_grafica:
             import plotly.express as px
-            # Como ya no existe el periodo 0, graficamos el dataframe directo
             fig = px.bar(df_amort, 
                         x="Periodo", 
                         y=["Amortización", "Interés"], 
@@ -1026,7 +990,6 @@ elif opcion == "5. Valuación de Bonos":
     with c2:
         st.markdown("**Condiciones de Mercado**")
         
-        # Si queremos el precio, pedimos la tasa
         if modo_bono == "Calcular Precio del Bono (P) conociendo su Tasa de Rendimiento":
             tipo_tasa_bono = st.radio("Ingresar Tasa de Rendimiento como:", ["Tasa efectiva periódica", "Tasa nominal anual"], key="tipo_tasa_b")
             
@@ -1037,7 +1000,6 @@ elif opcion == "5. Valuación de Bonos":
                 i_nom_mercado = st.number_input("Tasa de Rend. Nominal Anual ($i^{(m)}$) %", value=10.0, step=0.1, key="bono_inom") / 100
                 str_i_bono = r"\frac{i^{(m)}}{m}"
                 
-        # Si queremos la tasa, pedimos el precio
         else:
             precio_mercado = st.number_input("Precio actual en el mercado ($P$)", min_value=0.01, value=950.0, step=10.0, key="bono_p_mercado")
             
@@ -1096,13 +1058,11 @@ elif opcion == "5. Valuación de Bonos":
     # CASO B: CALCULAR YTM
     # ==========================================
     else:
-        # Llamamos al Solver
         i_periodo_res = engine.tasa_rendimiento_bono(precio_mercado, F_bono, r_periodo, C_bono, n_periodos_bono)
         
         if np.isnan(i_periodo_res):
             st.error("No se pudo encontrar una tasa válida para este precio.")
         else:
-            # Convertimos la periódica a nominal anual para mostrarla
             i_nom_res = i_periodo_res * m_bono
             
             if precio_mercado > C_bono:
@@ -1162,7 +1122,7 @@ elif opcion == "6. Valuación de Acciones":
             with col_form_gs:
                 st.latex(r"P_0 = \frac{D_1}{k - g}")
         else:
-            st.warning("⚠️ La tasa de rendimiento ($k$) debe ser mayor a la de crecimiento ($g$) para valuar la acción.")
+            st.warning("La tasa de rendimiento ($k$) debe ser mayor a la de crecimiento ($g$) para valuar la acción.")
 
     # --- PESTAÑA 2: RENDIMIENTO REQUERIDO ---
     with tab_rendimiento:
@@ -1187,7 +1147,6 @@ elif opcion == "6. Valuación de Acciones":
     with tab_multiplos:
         st.markdown("### Valuación Relativa por Múltiplos")
         
-        # Un solo selector para definir el par lógico
         metodo_final = st.selectbox("Seleccione el método de valuación:", [
             "Precio / Utilidad (P/E Ratio)",
             "Precio / Ventas (P/S Ratio)",
@@ -1198,7 +1157,6 @@ elif opcion == "6. Valuación de Acciones":
         st.write("---")
         c1, c2 = st.columns(2)
         
-        # Configuramos etiquetas y fórmulas según el método elegido
         if metodo_final == "Precio / Utilidad (P/E Ratio)":
             label_metrica = "Utilidad por Acción (UPA / EPS)"
             label_multiplo = "Múltiplo P/E Objetivo"
@@ -1214,7 +1172,7 @@ elif opcion == "6. Valuación de Acciones":
             label_multiplo = "Múltiplo EV/EBITDA Objetivo"
             formula_lat = r"EV = \text{EBITDA} \times \left( \frac{EV}{\text{EBITDA}} \right)"
             es_ev = True
-        else: # P/B Ratio
+        else: 
             label_metrica = "Valor en Libros por Acción (VLA)"
             label_multiplo = "Múltiplo P/B Objetivo"
             formula_lat = r"P_0 = \text{VLA} \times \left( \frac{P}{B} \right)"
@@ -1225,7 +1183,6 @@ elif opcion == "6. Valuación de Acciones":
         with c2:
             val_multiplo = st.number_input(f"{label_multiplo}", min_value=0.1, value=15.0, step=0.5, key="val_mult_input")
 
-        # Cálculo y resultado
         resultado_final = engine.valuacion_multiplos(val_metrica, val_multiplo)
         
         st.write("---")
@@ -1246,7 +1203,6 @@ elif opcion == "6. Valuación de Acciones":
 elif opcion == "7. Forwards (Derivados)":
     st.markdown('<div class="section-header">8. Forwards (Precio y Valuación)</div>', unsafe_allow_html=True)
     
-    # Selector global de capitalización para este módulo
     tipo_cap = st.radio("Tipo de Capitalización:", ["Continua", "Discreta"], horizontal=True, key="fwd_cap_global")
     es_continua = "Continua" in tipo_cap
 
@@ -1262,7 +1218,7 @@ elif opcion == "7. Forwards (Derivados)":
                             horizontal=True, key="radio_tipo_fwd")
         
         st.write("---")
-        c1, c2 = st.columns([1.2, 0.8]) # Hacemos la columna izquierda un poco más ancha para los menús dinámicos
+        c1, c2 = st.columns([1.2, 0.8]) 
         
         with c1:
             S0 = st.number_input("Precio Spot Actual ($S_0$)", min_value=0.0, value=100.0, key="fwd_s0")
@@ -1270,9 +1226,6 @@ elif opcion == "7. Forwards (Derivados)":
             T_fwd = st.number_input("Tiempo total del contrato ($T$ en años)", min_value=0.01, value=1.0, key="fwd_t")
             st.write("---")
             
-            # =========================================================
-            # LÓGICA DE INGRESOS (DIVIDENDOS)
-            # =========================================================
             if "Ingresos" in tipo_fwd:
                 st.markdown("##### Configuración de Dividendos")
                 modo_ing = st.radio("Frecuencia:", ["Periódicos y Constantes", "Irregulares (Personalizados)"], horizontal=True, key="modo_ing")
@@ -1286,7 +1239,7 @@ elif opcion == "7. Forwards (Derivados)":
                     I_ing = engine.calcular_vp_dividendos(monto_div, freq_div, r_fwd, T_fwd, "Continua" if es_continua else "Discreta")
                     formula_I = r"I = \sum_{k=1}^{T \cdot m} D e^{-r (\frac{k}{m})}" if es_continua else r"I = \sum_{k=1}^{T \cdot m} \frac{D}{(1+r)^{k/m}}"
                 
-                else: # Irregulares
+                else: 
                     n_flujos = st.number_input("Cantidad de dividendos esperados", min_value=1, max_value=24, value=4, key="n_flujos_ing")
                     montos_irr = []
                     tiempos_irr = []
@@ -1297,12 +1250,11 @@ elif opcion == "7. Forwards (Derivados)":
                         m_val = cx1.number_input(f"Monto Div {i+1} ($)", value=10.0, step=1.0, key=f"monto_ing_{i}")
                         t_val = cx2.number_input(f"Ocurre en el Mes", min_value=0.1, value=float(i+1), step=1.0, key=f"mes_ing_{i}")
                         montos_irr.append(m_val)
-                        tiempos_irr.append(t_val / 12.0) # Convertimos meses a años internamente
+                        tiempos_irr.append(t_val / 12.0) 
                         
                     I_ing = engine.calcular_vp_flujos_irregulares(montos_irr, tiempos_irr, r_fwd, "Continua" if es_continua else "Discreta")
                     formula_I = r"I = \sum_{j=1}^{n} D_j e^{-r t_j}" if es_continua else r"I = \sum_{j=1}^{n} \frac{D_j}{(1+r)^{t_j}}"
 
-                # Cálculo Final Forward Ingresos
                 if es_continua:
                     fwd_res = (S0 - I_ing) * np.exp(r_fwd * T_fwd)
                     formula_fwd = r"F = (S_0 - I) e^{rT}"
@@ -1313,9 +1265,6 @@ elif opcion == "7. Forwards (Derivados)":
                 st.info(f"Valor Presente de ingresos calculado ($I$): **${I_ing:,.4f}**")
                 st.latex(formula_I)
 
-            # =========================================================
-            # LÓGICA DE COSTOS DE ALMACENAJE (MERCANCÍAS)
-            # =========================================================
             elif "Costos" in tipo_fwd:
                 st.markdown("##### Configuración de Costos (Almacenaje / Seguro)")
                 modo_costo = st.radio("Frecuencia:", ["Periódicos y Constantes", "Irregulares (Personalizados)"], horizontal=True, key="modo_costo")
@@ -1329,7 +1278,7 @@ elif opcion == "7. Forwards (Derivados)":
                     U_costo = engine.calcular_vp_dividendos(monto_costo, freq_costo, r_fwd, T_fwd, "Continua" if es_continua else "Discreta")
                     formula_U = r"U = \sum_{k=1}^{T \cdot m} C e^{-r (\frac{k}{m})}" if es_continua else r"U = \sum_{k=1}^{T \cdot m} \frac{C}{(1+r)^{k/m}}"
                 
-                else: # Irregulares
+                else: 
                     n_flujos_c = st.number_input("Cantidad de pagos de costos", min_value=1, max_value=24, value=4, key="n_flujos_costo")
                     montos_c_irr = []
                     tiempos_c_irr = []
@@ -1345,7 +1294,6 @@ elif opcion == "7. Forwards (Derivados)":
                     U_costo = engine.calcular_vp_flujos_irregulares(montos_c_irr, tiempos_c_irr, r_fwd, "Continua" if es_continua else "Discreta")
                     formula_U = r"U = \sum_{j=1}^{n} C_j e^{-r t_j}" if es_continua else r"U = \sum_{j=1}^{n} \frac{C_j}{(1+r)^{t_j}}"
 
-                # Cálculo Final Forward Costos
                 if es_continua:
                     fwd_res = (S0 + U_costo) * np.exp(r_fwd * T_fwd)
                     formula_fwd = r"F = (S_0 + U) e^{rT}"
@@ -1356,17 +1304,11 @@ elif opcion == "7. Forwards (Derivados)":
                 st.warning(f"Valor Presente de costos calculado ($U$): **${U_costo:,.4f}**")
                 st.latex(formula_U)
 
-            # =========================================================
-            # LÓGICA DE DIVISAS / YIELD
-            # =========================================================
             elif "Divisas" in tipo_fwd:
                 delta_fwd = st.number_input("Tasa Extranjera ($\delta$) %", value=2.0, step=0.1, key="fwd_delta") / 100
                 fwd_res = engine.forward_calculo(S0, r_fwd, delta_fwd, T_fwd, "Continua" if es_continua else "Discreta")
                 formula_fwd = r"F = S_0 e^{(r - \delta)T}" if es_continua else r"F = S_0 \frac{(1+r)^T}{(1+\delta)^T}"
             
-            # =========================================================
-            # LÓGICA SIMPLE
-            # =========================================================
             else:
                 if es_continua:
                     fwd_res = S0 * np.exp(r_fwd * T_fwd)
@@ -1405,14 +1347,11 @@ elif opcion == "7. Forwards (Derivados)":
             st.latex(formula_v)
 
 # =============================================================================
-# 9. OPCIONES FINANCIERAS (BLACK-SCHOLES Y CRR)
+# 9. OPCIONES FINANCIERAS 
 # =============================================================================
 elif opcion == "8. Opciones (Derivados)":
     st.markdown('<div class="section-header">9. Valuación de Opciones Financieras</div>', unsafe_allow_html=True)
     
-    # -----------------------------------------------------
-    # VARIABLES GLOBALES DEL SUBYACENTE
-    # -----------------------------------------------------
     st.markdown("#### Parámetros del Subyacente y Mercado")
     col1, col2, col3 = st.columns(3)
     
@@ -1451,7 +1390,6 @@ elif opcion == "8. Opciones (Derivados)":
         extra_val = 0.0
         modelo_cod = "Simple"
         
-        # --- LÓGICA DE INGRESOS (DIVIDENDOS) ---
         if "2." in tipo_bsm:
             st.markdown("##### Configuración de Dividendos")
             modo_ing = st.radio("Frecuencia:", ["Periódicos y Constantes", "Irregulares (Personalizados)"], horizontal=True, key="bsm_modo_ing")
@@ -1476,7 +1414,6 @@ elif opcion == "8. Opciones (Derivados)":
             st.info(f"VP de Dividendos descontados al continuo ($D$): **${extra_val:,.4f}**")
             modelo_cod = "Ingresos"
             
-        # --- LÓGICA DE COSTOS (MERCANCÍAS) ---
         elif "3." in tipo_bsm:
             st.markdown("##### Configuración de Costos (Almacenaje / Seguro)")
             modo_costo = st.radio("Frecuencia:", ["Periódicos y Constantes", "Irregulares (Personalizados)"], horizontal=True, key="bsm_modo_costo")
@@ -1501,7 +1438,6 @@ elif opcion == "8. Opciones (Derivados)":
             st.warning(f"VP de Costos descontados al continuo ($U$): **${extra_val:,.4f}**")
             modelo_cod = "Costos"
 
-        # --- OTROS SUBYACENTES ---
         elif "4." in tipo_bsm:
             extra_val = st.number_input("Tasa de rendimiento continuo ($q$) %", value=2.0, step=0.1) / 100
             modelo_cod = "Yield"
@@ -1511,10 +1447,8 @@ elif opcion == "8. Opciones (Derivados)":
         elif "6." in tipo_bsm:
             modelo_cod = "Futuros"
 
-        # Llamada al motor
         call_price, put_price, d1_res, d2_res = engine.opciones_bsm(modelo_cod, S_opt, K_opt, T_opt, r_opt, sigma_opt, extra_val)
 
-        # Fórmulas Dinámicas
         if modelo_cod == "Simple":
             f_call = r"c = S_0 N(d_1) - K e^{-rT} N(d_2)"
             f_put = r"p = K e^{-rT} N(-d_2) - S_0 N(-d_1)"
@@ -1541,7 +1475,6 @@ elif opcion == "8. Opciones (Derivados)":
             f_d1 = r"d_1 = \frac{\ln(F_0 / K) + (\sigma^2/2)T}{\sigma \sqrt{T}}"
 
         st.write("---")
-        # Resultados
         col_res_call, col_res_put = st.columns(2)
         with col_res_call:
             st.markdown(f"<div style='background-color:#E8F5E9; padding:15px; border-radius:10px; border-left: 5px solid #2E7D32;'>"
@@ -1556,7 +1489,6 @@ elif opcion == "8. Opciones (Derivados)":
             st.latex(f_put)
             st.latex(r"d_2 = d_1 - \sigma \sqrt{T}")
 
-        # Griegas Expansibles
         with st.expander("Ver Letras Griegas (Sensibilidades)"):
             delta_c, delta_p, gamma, vega, theta_c, theta_p, rho_c, rho_p = engine.griegas_bsm(
                 modelo_cod, S_opt, K_opt, T_opt, r_opt, sigma_opt, extra_val)
@@ -1582,7 +1514,7 @@ elif opcion == "8. Opciones (Derivados)":
     else:
         import plotly.graph_objects as go
         
-        st.info("💡 **Modelo de Árbol Binomial (Cox-Ross-Rubinstein)**. Permite valuar el ejercicio anticipado (Estilo Americano).")
+        st.info(" **Modelo de Árbol Binomial (Cox-Ross-Rubinstein)**. Permite valuar el ejercicio anticipado (Estilo Americano).")
         
         c_binom1, c_binom2 = st.columns(2)
         pasos = c_binom1.slider("Número de Pasos en el árbol ($n$)", min_value=2, max_value=10, value=4)
@@ -1591,7 +1523,6 @@ elif opcion == "8. Opciones (Derivados)":
         es_americana = c_binom2.checkbox("Valuar como Opción Americana (Ejercicio Anticipado)", value=True)
         tipo_opcion_arbol = c_binom2.radio("Graficar el árbol para:", ["Call", "Put"], horizontal=True)
         
-        # Calcular usando el motor
         precio_call, arbol_call = engine.binomial_tree(S_opt, K_opt, T_opt, r_opt, sigma_opt, pasos, q_binom, 'call', es_americana)
         precio_put, arbol_put = engine.binomial_tree(S_opt, K_opt, T_opt, r_opt, sigma_opt, pasos, q_binom, 'put', es_americana)
         
@@ -1607,7 +1538,6 @@ elif opcion == "8. Opciones (Derivados)":
                 st.markdown(f"<div style='background-color:#FFEBEE; padding:15px; border-radius:10px; border-left: 5px solid #C62828;'>"
                             f"<h3 style='color:#C62828; margin:0;'>Put {estilo}: ${precio_put:,.4f}</h3></div>", unsafe_allow_html=True)
 
-            # --- GRÁFICA DEL ÁRBOL ---
             st.write("---")
             st.markdown(f"### Visualización del Árbol Binomial ($n={pasos}$)")
             
@@ -1640,7 +1570,7 @@ elif opcion == "8. Opciones (Derivados)":
             st.plotly_chart(fig, use_container_width=True)
             st.caption("Los nodos muestran el precio del subyacente (S) y el valor de la prima (V) en ese instante.")
 # =============================================================================
-# 9. FORMULARIO (DESCARGABLE)
+# 9. FORMULARIO 
 # =============================================================================
 elif opcion == "9. Formulario":
     st.markdown('<div class="section-header">Formulario Oficial de Matemáticas Financieras</div>', unsafe_allow_html=True)
