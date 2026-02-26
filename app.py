@@ -1577,7 +1577,7 @@ elif opcion == "9. Formulario":
     
     st.write("Explora las fórmulas por categoría. Al final de cada pestaña encontrarás un botón para descargar únicamente el formulario de esa sección en formato HTML interactivo.")
     
-    # Función auxiliar para generar la plantilla HTML sin repetir código
+    # Función auxiliar para generar la plantilla HTML con soporte para tablas
     def generar_html_formulario(titulo, contenido_cuerpo):
         return f"""
         <!DOCTYPE html>
@@ -1585,15 +1585,23 @@ elif opcion == "9. Formulario":
         <head>
             <meta charset="UTF-8">
             <title>{titulo}</title>
+            <script>
+            MathJax = {{
+              tex: {{
+                inlineMath: [['$', '$'], ['\\\\(', '\\\\)']]
+              }}
+            }};
+            </script>
             <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
             <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
             <style>
-                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; }}
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; color: #333; }}
                 h1 {{ text-align: center; color: #1E3A8A; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; }}
                 h2 {{ color: #2563EB; margin-top: 30px; border-bottom: 1px solid #E2E8F0; padding-bottom: 5px; }}
-                h3 {{ color: #0F172A; margin-top: 20px; }}
-                .formula-box {{ background-color: #F8FAFC; border-left: 4px solid #3B82F6; padding: 15px; margin-bottom: 20px; border-radius: 4px; overflow-x: auto; }}
-                .formula-title {{ font-weight: bold; margin-bottom: 10px; color: #0F172A; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; font-size: 0.95em; }}
+                th, td {{ border: 1px solid #CBD5E1; padding: 12px; text-align: left; vertical-align: middle; }}
+                th {{ background-color: #F8FAFC; color: #0F172A; font-weight: bold; }}
+                td:nth-child(2) {{ text-align: center; background-color: #ffffff; }}
                 .footer {{ text-align: center; margin-top: 50px; font-size: 0.8em; color: #64748B; }}
             </style>
         </head>
@@ -1601,9 +1609,6 @@ elif opcion == "9. Formulario":
             <h1>{titulo}</h1>
             {contenido_cuerpo}
             <div class="footer">Generado automáticamente por la Calculadora Actuarial. ¡Mucho éxito!</div>
-            <script>
-                // window.onload = function() {{ window.print(); }}
-            </script>
         </body>
         </html>
         """
@@ -1616,159 +1621,249 @@ elif opcion == "9. Formulario":
     # TAB 1: MATEMÁTICAS FINANCIERAS
     # ---------------------------------------------------------
     with tab_mat_fin:
-        st.subheader("Tasas de Interés")
-        st.latex(r"1 + i = \left(1 + \frac{i^{(m)}}{m}\right)^m = e^\delta")
-        st.latex(r"i = \left(1 + \frac{i^{(m)}}{m}\right)^m - 1 \quad | \quad \delta = m \ln\left(1 + \frac{i^{(m)}}{m}\right)")
-        st.latex(r"i^{(p)} = \left(1 + \frac{i^{(m)}}{m}\right)^{\frac{m}{p}} - 1")
-
-        st.subheader("Valor del Dinero en el Tiempo")
-        st.latex(r"VF = C_0 \left(1+\frac{i^{(m)}}{m}\right)^{nm} \quad | \quad VP = C_n \left(1+\frac{i^{(m)}}{m}\right)^{-nm}")
-        st.latex(r"n = \frac{\ln(C_n/C_0)}{\ln(1+i)} \quad | \quad i = \left(\frac{C_n}{C_0}\right)^{\frac{1}{n}} - 1")
-
-        st.subheader("Rentas y Anualidades")
-        st.latex(r"VF = R \left[ \frac{\left(1+\frac{i^{(m)}}{m}\right)^{nm} - 1}{\frac{i^{(m)}}{m}} \right] \quad | \quad VP = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]")
-        st.latex(r"VP_{perp} = \frac{R}{\frac{i^{(m)}}{m}}")
-
-        st.subheader("Amortización")
-        st.latex(r"R = VP \left[ \frac{i_m}{1 - \left(1+i_m\right)^{-nm}} \right] \quad | \quad VP = R \left[ \frac{1 - \left(1+i_m\right)^{-nm}}{i_m} \right]")
-
-        # HTML Específico para esta pestaña
-        html_mat_fin = generar_html_formulario("Formulario: Matemáticas Financieras", """
-        <h2>Tasas de Interés</h2>
-        <div class="formula-box">
-            <div class="formula-title">Triple Igualdad y Equivalencias</div>
-            $$1 + i = \\left(1 + \\frac{i^{(m)}}{m}\\right)^m = e^\\delta$$
-            $$i = \\left(1 + \\frac{i^{(m)}}{m}\\right)^m - 1 \\quad | \\quad \\delta = m \\ln\\left(1 + \\frac{i^{(m)}}{m}\\right)$$
-            $$i = e^\\delta - 1 \\quad | \\quad i^{(m)} = m \\left(e^{\\delta/m} - 1\\right)$$
-            $$i^{(p)} = \\left(1 + \\frac{i^{(m)}}{m}\\right)^{\\frac{m}{p}} - 1$$
-        </div>
-        <h2>Valor del Dinero en el Tiempo (TVM)</h2>
-        <div class="formula-box">
-            <div class="formula-title">Valor Futuro (VF) y Valor Presente (VP)</div>
-            $$VF = C_0 (1+i)^n \\quad | \\quad VF = C_0 \\left(1+\\frac{i^{(m)}}{m}\\right)^{nm} \\quad | \\quad VF = C_0 e^{\\delta n}$$
-            $$VP = C_n (1+i)^{-n} \\quad | \\quad VP = C_n \\left(1+\\frac{i^{(m)}}{m}\\right)^{-nm} \\quad | \\quad VP = C_n e^{-\\delta n}$$
-            $$n = \\frac{\\ln(C_n/C_0)}{\\ln(1+i)} \\quad | \\quad i = \\left(\\frac{C_n}{C_0}\\right)^{\\frac{1}{n}} - 1$$
-        </div>
-        <h2>Rentas y Anualidades</h2>
-        <div class="formula-box">
-            <div class="formula-title">Constantes Periódicas</div>
-            $$VF = R \\left[ \\frac{\\left(1+\\frac{i^{(m)}}{m}\\right)^{nm} - 1}{\\frac{i^{(m)}}{m}} \\right] \\quad | \\quad VP = R \\left[ \\frac{1 - \\left(1+\\frac{i^{(m)}}{m}\\right)^{-nm}}{\\frac{i^{(m)}}{m}} \\right]$$
-            <div class="formula-title">Continuas y Perpetuidades</div>
-            $$VF = \\bar{R} \\left[ \\frac{e^{\\delta n} - 1}{\\delta} \\right] \\quad | \\quad VP = \\bar{R} \\left[ \\frac{1 - e^{-\\delta n}}{\\delta} \\right]$$
-            $$VP_{perp} = \\frac{R}{\\frac{i^{(m)}}{m}}$$
-        </div>
-        <h2>Amortización</h2>
-        <div class="formula-box">
-            $$R = VP \\left[ \\frac{i_m}{1 - \\left(1+i_m\\right)^{-nm}} \\right] \\quad | \\quad VP = R \\left[ \\frac{1 - \\left(1+i_m\\right)^{-nm}}{i_m} \\right]$$
-        </div>
+        st.subheader("1. Tasas de Interés")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **Triple igualdad** | $1 + i = \left(1 + \frac{i^{(m)}}{m}\right)^m = e^\delta$ | Relaciona y demuestra la equivalencia entre las tasas efectiva, nominal e instantánea. |
+| **Tasa Efectiva Anual ($i$)** | $i = \left(1 + \frac{i^{(m)}}{m}\right)^m - 1$ | Calcula el rendimiento real anual a partir de una tasa nominal capitalizable $m$ veces al año. |
+| **Tasa Instantánea ($\delta$)** | $\delta = m \ln\left(1 + \frac{i^{(m)}}{m}\right)$ | Calcula la fuerza de interés o tasa de capitalización continua. |
+| **Instantánea a Efectiva ($i$)** | $i = e^\delta - 1$ | Convierte una tasa de capitalización continua a una tasa efectiva anual. |
+| **Instantánea a Nominal ($i^{(m)}$)** | $i^{(m)} = m \left(e^{\delta/m} - 1\right)$ | Convierte una tasa continua a una tasa nominal anual. |
+| **Nominal a Nominal ($i^{(p)}$)** | $i^{(p)} = \left(1 + \frac{i^{(m)}}{m}\right)^{\frac{m}{p}} - 1$ | Transforma una tasa nominal con $m$ capitalizaciones a otra equivalente con $p$ capitalizaciones. |
         """)
-        
+
+        st.subheader("2. Valor del Dinero en el Tiempo")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **Valor Futuro (Efectiva)** | $VF = C_0 (1+i)^n$ | Calcula el monto acumulado de un capital inicial con tasa efectiva anual. |
+| **Valor Futuro (Nominal)** | $VF = C_0 \left(1+\frac{i^{(m)}}{m}\right)^{nm}$ | Calcula el monto acumulado usando una tasa nominal capitalizable periódicamente. |
+| **Valor Futuro (Instantánea)** | $VF = C_0 e^{\delta n}$ | Calcula el monto acumulado bajo un esquema de capitalización continua. |
+| **Valor Presente (Efectiva)** | $VP = C_n (1+i)^{-n}$ | Descuenta un flujo futuro para hallar su valor actual con tasa efectiva. |
+| **Valor Presente (Nominal)** | $VP = C_n \left(1+\frac{i^{(m)}}{m}\right)^{-nm}$ | Descuenta un flujo futuro usando una tasa nominal periódica. |
+| **Valor Presente (Instantánea)**| $VP = C_n e^{-\delta n}$ | Descuenta un flujo futuro bajo capitalización continua. |
+| **Número de Periodos ($n$)** | $n = \frac{\ln(C_n/C_0)}{\ln(1+i)}$ | Determina el tiempo exacto necesario para que un capital alcance un valor futuro. |
+| **Tasa de Rendimiento ($i$)** | $i = \left(\frac{C_n}{C_0}\right)^{\frac{1}{n}} - 1$ | Calcula la tasa de interés implícita de una inversión a un solo pago. |
+        """)
+
+        st.subheader("3. Valor Futuro de Rentas ($VF$)")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **Vencidas (Periódicas)** | $VF = R \cdot s_{\overline{nm}\|i_m} = R \left[ \frac{\left(1+\frac{i^{(m)}}{m}\right)^{nm} - 1}{\frac{i^{(m)}}{m}} \right]$ | Monto acumulado por depósitos fijos al *final* de cada periodo. |
+| **Anticipadas (Periódicas)** | $VF = R \cdot \ddot{s}_{\overline{nm}\|i_m} = R \left[ \dots \right] \left(1+\frac{i^{(m)}}{m}\right)$ | Monto acumulado por depósitos fijos al *inicio* de cada periodo. |
+| **Vencidas pagaderas $p$ veces** | $VF = R \cdot s_{\overline{np}\|i_p} = R \left[ \frac{\left(1+\frac{i^{(p)}}{p}\right)^{np} - 1}{\frac{i^{(p)}}{p}} \right]$ | Cuando la frecuencia de los pagos difiere de la capitalización original. |
+| **Continuas (Instantánea $\delta$)** | $VF = \bar{R} \cdot \bar{s}_{\overline{n}\|\delta} = \bar{R} \left[ \frac{e^{\delta n} - 1}{\delta} \right]$ | Acumulación de un flujo de caja continuo (dinero ingresando sin pausa). |
+| **Continuas (Efectiva $i$)** | $VF = \bar{R} \cdot \bar{s}_{\overline{n}\|i} = \bar{R} \left[ \frac{(1+i)^n - 1}{\ln(1+i)} \right]$ | Acumulación de un flujo continuo expresado con tasa efectiva anual. |
+| **Crecientes Geométricas ($i_m \neq q_m$)**| $VF = R_1 \left[ \frac{(1+i_m)^{nm} - (1+q_m)^{nm}}{i_m - q_m} \right]$ | Acumulación de pagos que crecen a una tasa porcentual constante $q_m$. |
+| **Crecientes Geométricas ($i_m = q_m$)** | $VF = nm \cdot R_1 (1+i_m)^{nm-1}$ | Caso especial donde la tasa de crecimiento iguala a la tasa de interés. |
+| **Crecientes Aritméticas** | $VF = R_1 \left[ \frac{(1+i_m)^{nm} - 1}{i_m} \right] + \frac{G}{i_m} \left[ \frac{(1+i_m)^{nm} - 1}{i_m} - nm \right]$ | Acumulación de pagos que crecen sumando una cantidad monetaria fija $G$. |
+        """)
+
+        st.subheader("4. Valor Presente de Rentas ($VP$)")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **Vencidas (Periódicas)** | $VP = R \cdot a_{\overline{nm}\|i_m} = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]$ | Valor actual de pagos fijos realizados al *final* de cada periodo (ej. préstamos). |
+| **Anticipadas (Periódicas)** | $VP = R \cdot \ddot{a}_{\overline{nm}\|i_m} = R \left[ \dots \right] \left(1+\frac{i^{(m)}}{m}\right)$ | Valor actual de pagos fijos realizados al *inicio* de cada periodo (ej. rentas). |
+| **Perpetuas** | $VP = R \cdot a_{\overline{\infty}\|i_m} = \frac{R}{\frac{i^{(m)}}{m}}$ | Valor actual de un pago fijo que se recibirá para siempre. |
+| **Vencidas pagaderas $p$ veces** | $VP = R \cdot a_{\overline{np}\|i_p} = R \left[ \frac{1 - \left(1+\frac{i^{(p)}}{p}\right)^{-np}}{\frac{i^{(p)}}{p}} \right]$ | Cuando la frecuencia de pago difiere de la frecuencia de capitalización. |
+| **Continuas (Instantánea $\delta$)** | $VP = \bar{R} \cdot \bar{a}_{\overline{n}\|\delta} = \bar{R} \left[ \frac{1 - e^{-\delta n}}{\delta} \right]$ | Valor actual de un flujo de caja ininterrumpido a tasa continua. |
+| **Continuas (Efectiva $i$)** | $VP = \bar{R} \cdot \bar{a}_{\overline{n}\|i} = \bar{R} \left[ \frac{1 - (1+i)^{-n}}{\ln(1+i)} \right]$ | Valor actual de un flujo continuo expresado con tasa efectiva. |
+| **Crecientes Geométricas ($i_m \neq q_m$)**| $VP = R_1 \left[ \frac{1 - \left( \frac{1+q_m}{1+i_m} \right)^{nm}}{i_m - q_m} \right]$ | Valor actual de pagos crecientes porcentualmente (escalonados). |
+| **Crecientes Geométricas ($i_m = q_m$)** | $VP = \frac{nm \cdot R_1}{1+i_m}$ | Caso especial del gradiente geométrico donde $i_m = q_m$. |
+| **Crecientes Aritméticas** | $VP = R_1 \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right] + \frac{G}{i_m} \left[ \dots \right]$ | Valor actual de una serie de pagos que se incrementan en monto fijo $G$. |
+        """)
+
+        st.subheader("5. Número de Periodos ($nm$) y Amortización")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **Periodos ($nm$) desde $VF$** | $nm = \frac{\ln\left(\frac{VF \cdot i_m}{R} + 1\right)}{\ln(1+i_m)}$ | Tiempo requerido para alcanzar una meta de ahorro $VF$ mediante pagos de $R$. |
+| **Periodos ($nm$) desde $VP$** | $nm = \frac{-\ln\left(1 - \frac{VP \cdot i_m}{R}\right)}{\ln(1+i_m)}$ | Tiempo requerido para liquidar un préstamo $VP$ pagando cuotas de $R$. |
+| **Pago Fijo ($R$) (Efectiva)**| $R = VP \left[ \frac{i_m}{1 - \left(1+i_m\right)^{-nm}} \right]$ | Calcula la mensualidad o cuota fija periódica para amortizar un préstamo. |
+| **Pago Fijo ($R$) (Nominal)** | $R = VP \left[ \frac{\frac{i^{(m)}}{m}}{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}} \right]$ | Calcula la cuota de amortización usando directamente la tasa nominal. |
+| **Préstamo ($VP$) (Efectiva)**| $VP = R \left[ \frac{1 - \left(1+i_m\right)^{-nm}}{i_m} \right]$ | Estima el monto máximo de crédito que se puede obtener pagando una cuota $R$. |
+        """)
+
+        # HTML Matemáticas Financieras
+        html_mat_fin = generar_html_formulario("Formulario: Matemáticas Financieras", r"""
+        <h2>1. Tasas de Interés</h2>
+        <table>
+            <tr><th>Concepto</th><th>Fórmula</th><th>Uso</th></tr>
+            <tr><td>Triple Igualdad</td><td>$$1 + i = \left(1 + \frac{i^{(m)}}{m}\right)^m = e^\delta$$</td><td>Relación de tasas.</td></tr>
+            <tr><td>Efectiva Anual ($i$)</td><td>$$i = \left(1 + \frac{i^{(m)}}{m}\right)^m - 1$$</td><td>Nominal a Efectiva.</td></tr>
+            <tr><td>Instantánea ($\delta$)</td><td>$$\delta = m \ln\left(1 + \frac{i^{(m)}}{m}\right)$$</td><td>Nominal a Continua.</td></tr>
+            <tr><td>Efectiva desde $\delta$</td><td>$$i = e^\delta - 1$$</td><td>Continua a Efectiva.</td></tr>
+            <tr><td>Nominal desde $\delta$</td><td>$$i^{(m)} = m \left(e^{\delta/m} - 1\right)$$</td><td>Continua a Nominal.</td></tr>
+            <tr><td>Nominal a Nominal</td><td>$$i^{(p)} = \left(1 + \frac{i^{(m)}}{m}\right)^{\frac{m}{p}} - 1$$</td><td>Cambio de capitalización.</td></tr>
+        </table>
+
+        <h2>2. Valor del Dinero en el Tiempo (TVM)</h2>
+        <table>
+            <tr><th>Concepto</th><th>Fórmula</th><th>Uso</th></tr>
+            <tr><td>Valor Futuro (Efectiva / Nominal / Inst.)</td><td>$$VF = C_0 (1+i)^n \quad|\quad VF = C_0 \left(1+\frac{i^{(m)}}{m}\right)^{nm} \quad|\quad VF = C_0 e^{\delta n}$$</td><td>Monto acumulado.</td></tr>
+            <tr><td>Valor Presente (Efectiva / Nominal / Inst.)</td><td>$$VP = C_n (1+i)^{-n} \quad|\quad VP = C_n \left(1+\frac{i^{(m)}}{m}\right)^{-nm} \quad|\quad VP = C_n e^{-\delta n}$$</td><td>Descuento de capital.</td></tr>
+            <tr><td>Periodos ($n$) y Tasa ($i$)</td><td>$$n = \frac{\ln(C_n/C_0)}{\ln(1+i)} \quad|\quad i = \left(\frac{C_n}{C_0}\right)^{\frac{1}{n}} - 1$$</td><td>Tiempo y rendimiento.</td></tr>
+        </table>
+
+        <h2>3. Rentas, Anualidades y Amortización</h2>
+        <table>
+            <tr><th>Concepto</th><th>Fórmula</th><th>Uso</th></tr>
+            <tr><td>$VF$ Rentas Vencidas</td><td>$$VF = R \left[ \frac{\left(1+\frac{i^{(m)}}{m}\right)^{nm} - 1}{\frac{i^{(m)}}{m}} \right]$$</td><td>Acumulación periódica.</td></tr>
+            <tr><td>$VP$ Rentas Vencidas</td><td>$$VP = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]$$</td><td>Valor actual flujos fijos.</td></tr>
+            <tr><td>$VF$ y $VP$ Rentas Continuas</td><td>$$VF = \bar{R} \left[ \frac{e^{\delta n} - 1}{\delta} \right] \quad|\quad VP = \bar{R} \left[ \frac{1 - e^{-\delta n}}{\delta} \right]$$</td><td>Flujos ininterrumpidos.</td></tr>
+            <tr><td>Gradientes (Arit / Geom)</td><td>Ver versión web para fórmulas desarrolladas de $G$ y $q_m$.</td><td>Flujos crecientes.</td></tr>
+            <tr><td>Amortización: Pago $R$ y Capital $VP$</td><td>$$R = VP \left[ \frac{i_m}{1 - \left(1+i_m\right)^{-nm}} \right] \quad|\quad VP = R \left[ \frac{1 - \left(1+i_m\right)^{-nm}}{i_m} \right]$$</td><td>Cálculo de cuotas y préstamos.</td></tr>
+        </table>
+        """)
         st.write("---")
-        st.download_button(
-            label="Descargar Formulario: Matemáticas Financieras (HTML)",
-            data=html_mat_fin,
-            file_name="Formulario_MatFin.html",
-            mime="text/html",
-            key="btn_matfin"
-        )
+        st.download_button("Descargar Formulario: Matemáticas Financieras (HTML)", data=html_mat_fin, file_name="Form_MatFin.html", mime="text/html")
 
     # ---------------------------------------------------------
     # TAB 2: ACCIONES Y BONOS
     # ---------------------------------------------------------
     with tab_acc_bonos:
-        st.subheader("Valuación de Bonos")
-        st.latex(r"P = Fr \left[ \frac{1 - \left(1+i_m\right)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}")
-        st.latex(r"P_{mercado} = Fr \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}")
-
-        st.subheader("Valuación de Acciones")
-        st.latex(r"P_0 = \frac{D_1}{k - g} \quad | \quad k = \frac{D_1}{P_0} + g")
-        st.latex(r"P_0 = \text{UPA} \times \left( \frac{P}{E} \right) \quad | \quad P_0 = \text{VPA} \times \left( \frac{P}{S} \right)")
-
-        # HTML Específico para esta pestaña
-        html_acc_bonos = generar_html_formulario("Formulario: Acciones y Bonos", """
-        <h2>Valuación de Bonos</h2>
-        <div class="formula-box">
-            <div class="formula-title">Precio del Bono y YTM</div>
-            $$P = Fr \\left[ \\frac{1 - \\left(1+i_m\\right)^{-nm}}{i_m} \\right] + C(1+i_m)^{-nm}$$
-            $$P_{mercado} = Fr \\left[ \\frac{1 - (1+i_m)^{-nm}}{i_m} \\right] + C(1+i_m)^{-nm}$$
-        </div>
-        <h2>Valuación de Acciones</h2>
-        <div class="formula-box">
-            <div class="formula-title">Gordon-Shapiro</div>
-            $$P_0 = \\frac{D_1}{k - g} \\quad | \\quad k = \\frac{D_1}{P_0} + g$$
-             <div class="formula-title">Múltiplos Financieros</div>
-            $$P_0 = \\text{UPA} \\times \\left( \\frac{P}{E} \\right) \\quad | \\quad P_0 = \\text{VPA} \\times \\left( \\frac{P}{S} \\right)$$
-            $$EV = \\text{EBITDA} \\times \\left( \\frac{EV}{\\text{EBITDA}} \\right) \\quad | \\quad P_0 = \\text{VLA} \\times \\left( \\frac{P}{B} \\right)$$
-        </div>
+        st.subheader("1. Valuación de Bonos")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **Precio del Bono (Notación)** | $P = Fr \cdot a_{\overline{nm}\|i_m} + C(1+i_m)^{-nm}$ | Valuación teórica de un bono sumando el VP de los cupones y el principal. |
+| **Precio del Bono (Efectiva)** | $P = Fr \left[ \frac{1 - \left(1+i_m\right)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}$ | Valuación usando la tasa de rendimiento efectiva del mercado ($i_m$). |
+| **Precio del Bono (Nominal)** | $P = Fr \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right] + C(1+\frac{i^{(m)}}{m})^{-nm}$ | Valuación usando directamente la tasa nominal cotizada en el mercado. |
+| **Yield to Maturity (YTM)** | $P_{mercado} = Fr \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}$ | Ecuación para despejar la tasa de rendimiento $i_m$ iterativamente a partir del precio. |
         """)
-        
+
+        st.subheader("2. Valuación de Acciones")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **Precio Acción (Gordon)** | $P_0 = \frac{D_1}{k - g}$ | Modelo de Gordon-Shapiro para valuar el precio teórico con dividendos crecientes a perpetuidad. |
+| **Rendimiento Requerido ($k$)**| $k = \frac{D_1}{P_0} + g$ | Despeje para calcular el costo de capital accionario o rendimiento exigido. |
+| **Precio / Utilidad (P/E)** | $P_0 = \text{UPA} \times \left( \frac{P}{E} \right)$ | Valuación relativa usando el múltiplo Precio-Beneficio y la Utilidad por Acción. |
+| **Precio / Ventas (P/S)** | $P_0 = \text{VPA} \times \left( \frac{P}{S} \right)$ | Valuación relativa usando el múltiplo Precio-Ventas. |
+| **EV / EBITDA** | $EV = \text{EBITDA} \times \left( \frac{EV}{\text{EBITDA}} \right)$ | Valuación de la empresa completa (Enterprise Value) mediante EBITDA operativo. |
+| **Precio / Valor Libros (P/B)**| $P_0 = \text{VLA} \times \left( \frac{P}{B} \right)$ | Valuación usando el múltiplo Precio-Valor en Libros. |
+        """)
+
+        # HTML Acciones y Bonos
+        html_acc_bonos = generar_html_formulario("Formulario: Acciones y Bonos", r"""
+        <h2>1. Valuación de Bonos</h2>
+        <table>
+            <tr><th>Concepto</th><th>Fórmula</th><th>Uso</th></tr>
+            <tr><td>Precio del Bono</td><td>$$P = Fr \left[ \frac{1 - \left(1+i_m\right)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}$$</td><td>Precio teórico ($VP$ Cupones + $VP$ Principal).</td></tr>
+            <tr><td>YTM (Tasa al vencimiento)</td><td>$$P_{mercado} = Fr \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}$$</td><td>Tasa intrínseca a partir del precio mercado.</td></tr>
+        </table>
+        <h2>2. Valuación de Acciones</h2>
+        <table>
+            <tr><th>Concepto</th><th>Fórmula</th><th>Uso</th></tr>
+            <tr><td>Gordon-Shapiro ($P_0$ y $k$)</td><td>$$P_0 = \frac{D_1}{k - g} \quad|\quad k = \frac{D_1}{P_0} + g$$</td><td>Valuación por dividendos crecientes.</td></tr>
+            <tr><td>Múltiplos Financieros</td><td>$$P_0 = \text{UPA} \times \left( \frac{P}{E} \right) \quad|\quad EV = \text{EBITDA} \times \left( \frac{EV}{\text{EBITDA}} \right)$$</td><td>Valuación relativa de mercado.</td></tr>
+        </table>
+        """)
         st.write("---")
-        st.download_button(
-            label="Descargar Formulario: Acciones y Bonos (HTML)",
-            data=html_acc_bonos,
-            file_name="Formulario_AccionesBonos.html",
-            mime="text/html",
-            key="btn_accbonos"
-        )
+        st.download_button("Descargar Formulario: Acciones y Bonos (HTML)", data=html_acc_bonos, file_name="Form_AccionesBonos.html", mime="text/html")
 
     # ---------------------------------------------------------
     # TAB 3: DERIVADOS FINANCIEROS
     # ---------------------------------------------------------
     with tab_derivados:
-        st.subheader("Forwards")
-        st.markdown("**Precio Teórico del Forward ($F$):**")
-        st.latex(r"F = (S_0 - I) e^{rT} \quad | \quad F = (S_0 + U) e^{rT}")
-        st.markdown("**Valuación del Contrato ($f$):**")
-        st.latex(r"f = S_t e^{-\delta T} - K e^{-r T} \quad | \quad f = K e^{-r T} - S_t e^{-\delta T}")
-
-        st.subheader("Opciones (Black-Scholes-Merton)")
-        st.latex(r"d_1 = \frac{\ln(S_0 / K) + (r - q + \sigma^2/2)T}{\sigma \sqrt{T}} \quad | \quad d_2 = d_1 - \sigma \sqrt{T}")
-        st.latex(r"c = S_0 e^{-qT} N(d_1) - K e^{-rT} N(d_2)")
-        st.latex(r"p = K e^{-rT} N(-d_2) - S_0 e^{-qT} N(-d_1)")
-
-        # HTML Específico para esta pestaña
-        html_derivados = generar_html_formulario("Formulario: Derivados Financieros", """
-        <h2>Forwards</h2>
-        <div class="formula-box">
-             <div class="formula-title">Valor Presente de Ingresos (I) y Costos (U)</div>
-             $$\\text{Continua: } I = \\sum_{j=1}^{n} D_j e^{-r t_j} \\quad | \\quad U = \\sum_{j=1}^{n} C_j e^{-r t_j}$$
-             $$\\text{Discreta: } I = \\sum_{k=1}^{T \\cdot m} \\frac{D}{(1+r)^{k/m}} \\quad | \\quad U = \\sum_{k=1}^{T \\cdot m} \\frac{C}{(1+r)^{k/m}}$$
-            
-            <div class="formula-title">Precio Teórico (F) Continua vs Discreta</div>
-            $$\\text{Continua: } F = S_0 e^{rT} \\quad | \\quad F = (S_0 - I) e^{rT} \\quad | \\quad F = (S_0 + U) e^{rT} \\quad | \\quad F = S_0 e^{(r - \\delta)T}$$
-            $$\\text{Discreta: } F = S_0 (1+r)^T \\quad | \\quad F = (S_0 - I) (1 + r)^T \\quad | \\quad F = (S_0 + U) (1 + r)^T \\quad | \\quad F = S_0 \\frac{(1+r)^T}{(1+\\delta)^T}$$
-            
-            <div class="formula-title">Valuación del Contrato (f) Larga vs Corta</div>
-            $$\\text{Continua: } f = S_t e^{-\\delta T} - K e^{-r T} \\quad | \\quad f = K e^{-r T} - S_t e^{-\\delta T}$$
-            $$\\text{Discreta: } f = \\frac{S_t}{(1+\\delta)^T} - \\frac{K}{(1+r)^T} \\quad | \\quad f = \\frac{K}{(1+r)^T} - \\frac{S_t}{(1+\\delta)^T}$$
-        </div>
-
-        <h2>Opciones (Black-Scholes-Merton)</h2>
-        <div class="formula-box">
-            <div class="formula-title">Fórmulas Base</div>
-            $$d_2 = d_1 - \\sigma \\sqrt{T}$$
-            
-            <div class="formula-title">1. Simple (Sin ingresos/costos)</div>
-            $$c = S_0 N(d_1) - K e^{-rT} N(d_2) \\quad | \\quad p = K e^{-rT} N(-d_2) - S_0 N(-d_1)$$
-            $$d_1 = \\frac{\\ln(S_0 / K) + (r + \\sigma^2/2)T}{\\sigma \\sqrt{T}}$$
-            
-            <div class="formula-title">2. Ingresos Discretos (D) y Costos Discretos (U)</div>
-            $$d_1 (Ingresos) = \\frac{\\ln((S_0 - D)/K) + (r + \\sigma^2/2)T}{\\sigma \\sqrt{T}} \\quad | \\quad d_1 (Costos) = \\frac{\\ln((S_0 + U)/K) + (r + \\sigma^2/2)T}{\\sigma \\sqrt{T}}$$
-            
-            <div class="formula-title">3. Retorno Conocido (Yield q)</div>
-            $$c = S_0 e^{-qT} N(d_1) - K e^{-rT} N(d_2) \\quad | \\quad p = K e^{-rT} N(-d_2) - S_0 e^{-qT} N(-d_1)$$
-            $$d_1 = \\frac{\\ln(S_0 / K) + (r - q + \\sigma^2/2)T}{\\sigma \\sqrt{T}}$$
-            
-             <div class="formula-title">4. Monedas (Tasa rf) y Futuros (F0)</div>
-            $$d_1 (Monedas) = \\frac{\\ln(S_0 / K) + (r - r_f + \\sigma^2/2)T}{\\sigma \\sqrt{T}} \\quad | \\quad d_1 (Futuros) = \\frac{\\ln(F_0 / K) + (\\sigma^2/2)T}{\\sigma \\sqrt{T}}$$
-        </div>
+        st.subheader("1. Forwards (Precio Teórico $F$ y Valuación $f$)")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **Activo Simple (Continua)** | $F = S_0 e^{rT}$ | Precio de entrega teórico $F$ sin ingresos ni costos de almacenaje (capitalización continua). |
+| **Activo Simple (Discreta)** | $F = S_0 (1+r)^T$ | Precio teórico $F$ con capitalización discreta anual. |
+| **Con Ingresos (Continua)** | $F = (S_0 - I) e^{rT}$ | Ajuste del precio descontando el valor presente de los ingresos $I$ (dividendos). |
+| **Con Ingresos (Discreta)** | $F = (S_0 - I) (1 + r)^T$ | Ajuste con ingresos en capitalización discreta. |
+| **Con Costos (Continua)** | $F = (S_0 + U) e^{rT}$ | Ajuste sumando el valor presente de los costos de almacenaje $U$. |
+| **Con Costos (Discreta)** | $F = (S_0 + U) (1 + r)^T$ | Ajuste sumando los costos bajo tasas discretas. |
+| **Divisas / Retorno (\delta)** | $F = S_0 e^{(r - \delta)T}$ | Precio forward para monedas extranjeras (con tasa $\delta$ o $r_f$) o activos con *yield* continuo. |
+| **Divisas (Discreta)** | $F = S_0 \frac{(1+r)^T}{(1+\delta)^T}$ | Paridad de tasas de interés cubierta en versión discreta. |
+| **VP Ingresos Periódicos (Cont)**| $I = \sum_{k=1}^{T \cdot m} D e^{-r (\frac{k}{m})}$ | VP de dividendos $D$ constantes en múltiples periodos (continua). |
+| **VP Ingresos Irregulares (Disc)**| $I = \sum_{j=1}^{n} \frac{D_j}{(1+r)^{t_j}}$ | VP de dividendos $D_j$ en fechas específicas (discreta). |
+| **VP Costos Periódicos (Cont)** | $U = \sum_{k=1}^{T \cdot m} C e^{-r (\frac{k}{m})}$ | VP de costos de almacenaje $C$ fijos y periódicos. |
+| **VP Costos Irregulares (Disc)**| $U = \sum_{j=1}^{n} \frac{C_j}{(1+r)^{t_j}}$ | VP de costos irregulares $C_j$ descontados (discreta). |
+| **Valor Contrato Larga (Cont)**| $f = S_t e^{-\delta T} - K e^{-r T}$ | Valor de mercado $f$ en el tiempo $t$ para quien compró el forward (continua). |
+| **Valor Contrato Corta (Cont)**| $f = K e^{-r T} - S_t e^{-\delta T}$ | Valor de mercado $f$ para quien vendió el forward (continua). |
+| **Valor Contrato Larga (Disc)**| $f = \frac{S_t}{(1+\delta)^T} - \frac{K}{(1+r)^T}$ | Valor del contrato largo en tiempo $t$ (discreta). |
+| **Valor Contrato Corta (Disc)**| $f = \frac{K}{(1+r)^T} - \frac{S_t}{(1+\delta)^T}$ | Valor del contrato corto en tiempo $t$ (discreta). |
         """)
+
+        st.subheader("2. Opciones Europeas (Black-Scholes-Merton)")
+        st.markdown(r"""
+| Concepto | Fórmula | Para qué se usa |
+| :--- | :---: | :--- |
+| **1. Simple Call ($c$)** | $c = S_0 N(d_1) - K e^{-rT} N(d_2)$ | Prima teórica de una opción de compra sobre activo sin dividendos. |
+| **1. Simple Put ($p$)** | $p = K e^{-rT} N(-d_2) - S_0 N(-d_1)$ | Prima teórica de una opción de venta sobre activo sin dividendos. |
+| **1. Parámetro Simple ($d_1$)**| $d_1 = \frac{\ln(S_0 / K) + (r + \sigma^2/2)T}{\sigma \sqrt{T}}$ | Factor de probabilidad $d_1$ base. |
+| **2. Con Ingresos Call ($c$)** | $c = (S_0 - D) N(d_1) - K e^{-rT} N(d_2)$ | Prima call descontando monto discreto de dividendos $D$. |
+| **2. Con Ingresos Put ($p$)** | $p = K e^{-rT} N(-d_2) - (S_0 - D) N(-d_1)$ | Prima put descontando dividendos. |
+| **2. Parámetro Ingresos ($d_1$)**| $d_1 = \frac{\ln((S_0 - D)/K) + (r + \sigma^2/2)T}{\sigma \sqrt{T}}$ | Factor ajustado reduciendo el precio *Spot* en $D$. |
+| **3. Con Costos Call ($c$)** | $c = (S_0 + U) N(d_1) - K e^{-rT} N(d_2)$ | Prima call agregando costos de almacenaje $U$ al subyacente. |
+| **3. Con Costos Put ($p$)** | $p = K e^{-rT} N(-d_2) - (S_0 + U) N(-d_1)$ | Prima put agregando costos. |
+| **3. Parámetro Costos ($d_1$)**| $d_1 = \frac{\ln((S_0 + U)/K) + (r + \sigma^2/2)T}{\sigma \sqrt{T}}$ | Factor ajustado inflando el precio *Spot* en $U$. |
+| **4. Yield Continuo Call ($c$)**| $c = S_0 e^{-qT} N(d_1) - K e^{-rT} N(d_2)$ | Prima call con rendimiento constante continuo $q$ (ej. índices). |
+| **4. Yield Continuo Put ($p$)**| $p = K e^{-rT} N(-d_2) - S_0 e^{-qT} N(-d_1)$ | Prima put con yield $q$. |
+| **4. Parámetro Yield ($d_1$)** | $d_1 = \frac{\ln(S_0 / K) + (r - q + \sigma^2/2)T}{\sigma \sqrt{T}}$ | Factor ajustado por la diferencia de tasas $r - q$. |
+| **5. Monedas Call ($c$)** | $c = S_0 e^{-r_f T} N(d_1) - K e^{-rT} N(d_2)$ | Prima call sobre divisas usando tasa libre de riesgo foránea $r_f$. |
+| **5. Monedas Put ($p$)** | $p = K e^{-rT} N(-d_2) - S_0 e^{-r_f T} N(-d_1)$ | Prima put sobre divisas (Garman-Kohlhagen). |
+| **5. Parámetro Monedas ($d_1$)**| $d_1 = \frac{\ln(S_0 / K) + (r - r_f + \sigma^2/2)T}{\sigma \sqrt{T}}$ | Factor ajustado por diferencial cambiario. |
+| **6. Futuros Call ($c$)** | $c = e^{-rT} [ F_0 N(d_1) - K N(d_2) ]$ | Prima call sobre un contrato de futuros $F_0$ (Modelo de Black). |
+| **6. Futuros Put ($p$)** | $p = e^{-rT} [ K N(-d_2) - F_0 N(-d_1) ]$ | Prima put sobre futuros. |
+| **6. Parámetro Futuros ($d_1$)**| $d_1 = \frac{\ln(F_0 / K) + (\sigma^2/2)T}{\sigma \sqrt{T}}$ | Factor $d_1$ adaptado para precio forward en lugar de Spot. |
+| **Fórmula común ($d_2$)** | $d_2 = d_1 - \sigma \sqrt{T}$ | Parámetro complementario $d_2$ aplicable a **todos** los modelos BSM. |
+        """)
+
+        # HTML Derivados
+        html_derivados = generar_html_formulario("Formulario: Derivados Financieros", r"""
+        <h2>1. Forwards</h2>
+        <table>
+            <tr><th>Concepto</th><th>Fórmula Continua</th><th>Fórmula Discreta</th></tr>
+            <tr><td>Precio Teórico ($F$) Base</td><td>$$F = S_0 e^{rT}$$</td><td>$$F = S_0 (1+r)^T$$</td></tr>
+            <tr><td>$F$ Con Ingresos (D)</td><td>$$F = (S_0 - I) e^{rT}$$</td><td>$$F = (S_0 - I) (1 + r)^T$$</td></tr>
+            <tr><td>$F$ Con Costos (U)</td><td>$$F = (S_0 + U) e^{rT}$$</td><td>$$F = (S_0 + U) (1 + r)^T$$</td></tr>
+            <tr><td>$F$ Divisas/Yield</td><td>$$F = S_0 e^{(r - \delta)T}$$</td><td>$$F = S_0 \frac{(1+r)^T}{(1+\delta)^T}$$</td></tr>
+            <tr><td>Valor Contrato Larga ($f$)</td><td>$$f = S_t e^{-\delta T} - K e^{-r T}$$</td><td>$$f = \frac{S_t}{(1+\delta)^T} - \frac{K}{(1+r)^T}$$</td></tr>
+            <tr><td>Valor Contrato Corta ($f$)</td><td>$$f = K e^{-r T} - S_t e^{-\delta T}$$</td><td>$$f = \frac{K}{(1+r)^T} - \frac{S_t}{(1+\delta)^T}$$</td></tr>
+        </table>
         
+        <h2>2. Opciones Europeas (Black-Scholes-Merton)</h2>
+        <table>
+            <tr><th>Modelo</th><th>Call ($c$) y Put ($p$)</th><th>Parámetro $d_1$</th></tr>
+            <tr>
+                <td>1. Simple</td>
+                <td>$$c = S_0 N(d_1) - K e^{-rT} N(d_2)$$ $$p = K e^{-rT} N(-d_2) - S_0 N(-d_1)$$</td>
+                <td>$$d_1 = \frac{\ln(S_0 / K) + (r + \sigma^2/2)T}{\sigma \sqrt{T}}$$</td>
+            </tr>
+            <tr>
+                <td>2. Ingresos (D)</td>
+                <td>$$c = (S_0 - D) N(d_1) - K e^{-rT} N(d_2)$$ $$p = K e^{-rT} N(-d_2) - (S_0 - D) N(-d_1)$$</td>
+                <td>$$d_1 = \frac{\ln((S_0 - D)/K) + (r + \sigma^2/2)T}{\sigma \sqrt{T}}$$</td>
+            </tr>
+            <tr>
+                <td>3. Costos (U)</td>
+                <td>$$c = (S_0 + U) N(d_1) - K e^{-rT} N(d_2)$$ $$p = K e^{-rT} N(-d_2) - (S_0 + U) N(-d_1)$$</td>
+                <td>$$d_1 = \frac{\ln((S_0 + U)/K) + (r + \sigma^2/2)T}{\sigma \sqrt{T}}$$</td>
+            </tr>
+            <tr>
+                <td>4. Yield ($q$)</td>
+                <td>$$c = S_0 e^{-qT} N(d_1) - K e^{-rT} N(d_2)$$ $$p = K e^{-rT} N(-d_2) - S_0 e^{-qT} N(-d_1)$$</td>
+                <td>$$d_1 = \frac{\ln(S_0 / K) + (r - q + \sigma^2/2)T}{\sigma \sqrt{T}}$$</td>
+            </tr>
+            <tr>
+                <td>5. Divisas ($r_f$)</td>
+                <td>$$c = S_0 e^{-r_f T} N(d_1) - K e^{-rT} N(d_2)$$ $$p = K e^{-rT} N(-d_2) - S_0 e^{-r_f T} N(-d_1)$$</td>
+                <td>$$d_1 = \frac{\ln(S_0 / K) + (r - r_f + \sigma^2/2)T}{\sigma \sqrt{T}}$$</td>
+            </tr>
+            <tr>
+                <td>6. Futuros ($F_0$)</td>
+                <td>$$c = e^{-rT} [ F_0 N(d_1) - K N(d_2) ]$$ $$p = e^{-rT} [ K N(-d_2) - F_0 N(-d_1) ]$$</td>
+                <td>$$d_1 = \frac{\ln(F_0 / K) + (\sigma^2/2)T}{\sigma \sqrt{T}}$$</td>
+            </tr>
+        </table>
+        <p style="text-align:center;"><b>Nota:</b> Para todos los modelos, $$d_2 = d_1 - \sigma \sqrt{T}$$</p>
+        """)
         st.write("---")
-        st.download_button(
-            label="Descargar Formulario: Derivados (HTML)",
-            data=html_derivados,
-            file_name="Formulario_Derivados.html",
-            mime="text/html",
-            key="btn_derivados"
-        )
+        st.download_button("Descargar Formulario: Derivados (HTML)", data=html_derivados, file_name="Form_Derivados.html", mime="text/html")
