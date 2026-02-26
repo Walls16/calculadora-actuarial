@@ -1714,7 +1714,30 @@ elif opcion == "9. Formulario":
             <tr><td>$VF$ Rentas Vencidas</td><td>$$VF = R \left[ \frac{\left(1+\frac{i^{(m)}}{m}\right)^{nm} - 1}{\frac{i^{(m)}}{m}} \right]$$</td><td>Acumulación periódica.</td></tr>
             <tr><td>$VP$ Rentas Vencidas</td><td>$$VP = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]$$</td><td>Valor actual flujos fijos.</td></tr>
             <tr><td>$VF$ y $VP$ Rentas Continuas</td><td>$$VF = \bar{R} \left[ \frac{e^{\delta n} - 1}{\delta} \right] \quad|\quad VP = \bar{R} \left[ \frac{1 - e^{-\delta n}}{\delta} \right]$$</td><td>Flujos ininterrumpidos.</td></tr>
-            <tr><td>Gradientes (Arit / Geom)</td><td>Ver versión web para fórmulas desarrolladas de $G$ y $q_m$.</td><td>Flujos crecientes.</td></tr>
+            <tr>
+                <td>Rentas Crec. Geométricas ($i_m \neq q_m$)</td>
+                <td>
+                    $$VF = R_1 \left[ \frac{(1+i_m)^{nm} - (1+q_m)^{nm}}{i_m - q_m} \right]$$<br>
+                    $$VP = R_1 \left[ \frac{1 - \left( \frac{1+q_m}{1+i_m} \right)^{nm}}{i_m - q_m} \right]$$
+                </td>
+                <td>Crecimiento porcentual constante ($q_m$).</td>
+            </tr>
+            <tr>
+                <td>Rentas Crec. Geométricas ($i_m = q_m$)</td>
+                <td>
+                    $$VF = nm \cdot R_1 (1+i_m)^{nm-1}$$<br>
+                    $$VP = \frac{nm \cdot R_1}{1+i_m}$$
+                </td>
+                <td>Caso especial: tasa interés = tasa crecimiento.</td>
+            </tr>
+            <tr>
+                <td>Rentas Crec. Aritméticas</td>
+                <td>
+                    $$VF = R_1 \left[ \frac{(1+i_m)^{nm} - 1}{i_m} \right] + \frac{G}{i_m} \left[ \frac{(1+i_m)^{nm} - 1}{i_m} - nm \right]$$<br>
+                    $$VP = R_1 \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right] + \frac{G}{i_m} \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} - nm(1+i_m)^{-nm} \right]$$
+                </td>
+                <td>Crecimiento en monto fijo ($G$).</td>
+            </tr>
             <tr><td>Amortización: Pago $R$ y Capital $VP$</td><td>$$R = VP \left[ \frac{i_m}{1 - \left(1+i_m\right)^{-nm}} \right] \quad|\quad VP = R \left[ \frac{1 - \left(1+i_m\right)^{-nm}}{i_m} \right]$$</td><td>Cálculo de cuotas y préstamos.</td></tr>
         </table>
         """)
