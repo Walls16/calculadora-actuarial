@@ -1083,7 +1083,7 @@ elif opcion == "5. Valuación de Bonos":
                 st.markdown(f"<span style='color:{color}; font-weight:bold;'>{estado_bono}</span>", unsafe_allow_html=True)
                 
             with col_res2:
-                st.info("El cálculo se realiza mediante métodos numéricos iterativos (Solver) buscando la tasa $i_m$ que iguale el Precio de Mercado con el Valor Presente de los flujos.")
+                st.info("El cálculo se realiza mediante métodos numéricos iterativos buscando la tasa $i_m$ que iguale el Precio de Mercado con el Valor Presente de los flujos.")
                 formula_ytm = r"P_{mercado} = Fr \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}"
                 st.latex(formula_ytm)
 
