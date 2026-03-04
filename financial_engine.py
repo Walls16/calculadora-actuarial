@@ -3,10 +3,11 @@ import pandas as pd
 from scipy.optimize import newton
 from scipy.stats import norm
 import scipy.optimize as opt
-
+import yfinance as yf
+from pypfopt import expected_returns, risk_models
+from pypfopt.efficient_frontier import EfficientFrontier
 
 class FinancialMathEngine:
-
     # ==========================================================
     # 1. TASAS
     # ==========================================================
@@ -28,8 +29,9 @@ class FinancialMathEngine:
         return m * (np.exp(delta / m) - 1)
     
     def tasa_nominal_m_a_nominal_p(self, i_m, m, p):
-        if m == 0 or p == 0: return 0
-        return ((1 + i_m / m) ** (m / p)) - 1
+            if m == 0 or p == 0: return 0
+            tasa_efectiva_periodo = ((1 + i_m / m) ** (m / p)) - 1
+            return tasa_efectiva_periodo * p 
     
     def generar_tabla_reinversion(self, C0, i_nom, n):
         periodos = [
@@ -375,6 +377,51 @@ class FinancialMathEngine:
                 vp_total += monto_div / ((1 + r)**t_pago)
         return vp_total
 
+    def optimizacion_markowitz(self, tickers_list, start_date, end_date, r_f=0.05):
+        # 1. Descargar datos de Yahoo Finance
+        raw_data = yf.download(tickers_list, start=start_date, end=end_date)
+        
+        # Validar la estructura de los datos devueltos por Yahoo Finance
+        # yfinance a veces devuelve MultiIndex o cambia los nombres
+        if 'Adj Close' in raw_data:
+            data = raw_data['Adj Close']
+        elif 'Close' in raw_data:
+            data = raw_data['Close']
+        else:
+            data = raw_data
+        # Limpiar datos (llenar huecos por días feriados y quitar NAs)
+        data = data.ffill().dropna()
+        # Protección por si se mete 1 solo ticker y devuelve una Serie de Pandas
+        if isinstance(data, pd.Series):
+            data = data.to_frame(name=tickers_list[0])
+        # 2. Calcular Rendimientos Esperados (mu) y Matriz de Covarianza (S)
+        mu = expected_returns.mean_historical_return(data)
+        S = risk_models.sample_cov(data)
+        # 3. Optimización Exacta: Máximo Ratio de Sharpe
+        ef_s = EfficientFrontier(mu, S)
+        pesos_s = ef_s.max_sharpe(risk_free_rate=r_f)
+        pesos_limpios_s = ef_s.clean_weights()
+        ret_s, vol_s, sharpe_s = ef_s.portfolio_performance(verbose=False, risk_free_rate=r_f)
+        # 4. Optimización Exacta: Mínima Varianza Global
+        # Instanciamos un nuevo EfficientFrontier porque el anterior ya fue resuelto/mutado
+        ef_m = EfficientFrontier(mu, S)
+        pesos_m = ef_m.min_volatility()
+        pesos_limpios_m = ef_m.clean_weights()
+        ret_m, vol_m, sharpe_m = ef_m.portfolio_performance(verbose=False, risk_free_rate=r_f)
+        # 5. Nube de simulación (Matriz vectorizada ultra-rápida para la gráfica)
+        n_sim = 2500
+        n_activos = len(data.columns) # Usar las columnas reales que bajaron por si uno falló
+        # Generar pesos aleatorios que sumen 1 matemáticamente usando una distribución Dirichlet
+        pesos_rand = np.random.dirichlet(np.ones(n_activos), size=n_sim)
+        # Rendimientos y volatilidades de la nube
+        ret_sim = pesos_rand.dot(mu.values)
+        vol_sim = np.sqrt(np.sum(pesos_rand * (pesos_rand @ S.values), axis=1))
+        sharpe_sim = (ret_sim - r_f) / vol_sim
+
+        nube_grafica = (ret_sim, vol_sim, sharpe_sim)
+
+        return data, mu, S, (ret_s, vol_s, sharpe_s, pesos_limpios_s), (ret_m, vol_m, sharpe_m, pesos_limpios_m), nube_grafica
+
     # ==========================================================
     # 8. FORWARDS (DERIVADOS) - MOTOR ACTUALIZADO
     # ==========================================================
@@ -407,6 +454,7 @@ class FinancialMathEngine:
     # 9. OPCIONES FINANCIERAS (BLACK-SCHOLES)
     # ==========================================================
     def opciones_bsm(self, tipo_modelo, S, K, T, r, sigma, extra=0.0):
+        
         # Evitar división por cero si T o sigma son muy cercanos a 0
         if T <= 0 or sigma <= 0:
             return 0.0, 0.0, 0.0, 0.0
@@ -417,7 +465,7 @@ class FinancialMathEngine:
         put = 0.0
 
         if tipo_modelo == "Simple":
-            d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+            d1 = (np.log(S / K) + (r + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
             d2 = d1 - sigma * np.sqrt(T)
             call = S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
             put = K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
@@ -425,29 +473,28 @@ class FinancialMathEngine:
         elif tipo_modelo == "Ingresos":
             S_adj = S - extra # extra = VP de los Dividendos (D)
             if S_adj <= 0: S_adj = 0.0001 # Protección matemática
-            d1 = (np.log(S_adj / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+            d1 = (np.log(S_adj / K) + (r + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
             d2 = d1 - sigma * np.sqrt(T)
             call = S_adj * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
             put = K * np.exp(-r * T) * norm.cdf(-d2) - S_adj * norm.cdf(-d1)
 
         elif tipo_modelo == "Yield" or tipo_modelo == "Monedas":
             # extra = q (Yield) o r_f (Tasa extranjera)
-            d1 = (np.log(S / K) + (r - extra + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+            d1 = (np.log(S / K) + (r - extra + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
             d2 = d1 - sigma * np.sqrt(T)
             call = S * np.exp(-extra * T) * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
             put = K * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp(-extra * T) * norm.cdf(-d1)
 
         elif tipo_modelo == "Futuros":
             # S = Precio Forward F0
-            d1 = (np.log(S / K) + (0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+            d1 = (np.log(S / K) + ((sigma**2) / 2) * T) / (sigma * np.sqrt(T))
             d2 = d1 - sigma * np.sqrt(T)
             call = np.exp(-r * T) * (S * norm.cdf(d1) - K * norm.cdf(d2))
             put = np.exp(-r * T) * (K * norm.cdf(-d2) - S * norm.cdf(-d1))
 
-
         elif tipo_modelo == "Costos":
             S_adj = S + extra # extra = VP de los Costos (U)
-            d1 = (np.log(S_adj / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+            d1 = (np.log(S_adj / K) + (r + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
             d2 = d1 - sigma * np.sqrt(T)
             call = S_adj * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
             put = K * np.exp(-r * T) * norm.cdf(-d2) - S_adj * norm.cdf(-d1)
@@ -473,7 +520,7 @@ class FinancialMathEngine:
         elif tipo_modelo == "Futuros":
             q_yield = r # En futuros, q = r para que el drift sea 0
 
-        d1 = (np.log(S_adj / K) + (r - q_yield + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+        d1 = (np.log(S_adj / K) + (r - q_yield + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
         d2 = d1 - sigma * np.sqrt(T)
 
         Nd1 = norm.cdf(d1)
