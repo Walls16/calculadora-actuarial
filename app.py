@@ -119,7 +119,7 @@ if opcion == "1. Tasas de Interés":
         st.latex(r"1 + i = \left(1 + \frac{i^{(m)}}{m}\right)^m = e^\delta")
         
         st.write("---")
-        with st.expander("📚 Ver Explicación de la Triple Igualdad"):
+        with st.expander("Ver Explicación de la Triple Igualdad"):
             st.markdown(r"""
             **Concepto Clave:**
             El objetivo de las finanzas es que, sin importar con qué frecuencia se reinviertan los intereses (mensual, diario o en cada milisegundo), un inversionista gane exactamente el mismo rendimiento a final de año.
