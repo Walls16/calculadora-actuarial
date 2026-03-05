@@ -1589,10 +1589,7 @@ elif opcion == "6. Valuación de Acciones":
             st.latex(rf"{var_nombre} = {val_metrica:,.2f} \times {val_multiplo:,.2f}")
             st.latex(rf"{var_nombre} = {resultado_final:,.2f}")
             st.success(f"**Resultado: {titulo_res} = ${resultado_final:,.2f}**")
-
 # =============================================================================
-# 7. PORTAFOLIOS EFICIENTES (MARKOWITZ)
-# =============================================================================# =============================================================================
 # 7. PORTAFOLIOS EFICIENTES (MARKOWITZ)
 # =============================================================================
 elif opcion == "7. Portafolios Eficientes":
@@ -1618,6 +1615,9 @@ elif opcion == "7. Portafolios Eficientes":
             tasa_libre_riesgo = st.number_input("Tasa Libre de Riesgo ($r_f$) %", value=5.0, step=0.1) / 100
             ejecutar = st.button("Optimizar Portafolio", use_container_width=True)
 
+    # =================================================================
+    # FASE 1: CÁLCULO Y ALMACENAMIENTO (Solo ocurre al presionar el botón)
+    # =================================================================
     if ejecutar:
         tickers = [ticker.strip().upper() for ticker in tickers_input.split(",") if ticker.strip()]
         
@@ -1626,197 +1626,207 @@ elif opcion == "7. Portafolios Eficientes":
         else:
             with st.spinner(f"Descargando datos históricos de {len(tickers)} activos y resolviendo matrices..."):
                 try:
-                    data, mu, S, res_sharpe, res_min, nube = engine.optimizacion_markowitz(
+                    # Llamamos al motor
+                    resultados = engine.optimizacion_markowitz(
                         tickers, fecha_inicio, fecha_fin, tasa_libre_riesgo
                     )
                     
-                    rend_s, vol_s, sharpe_ratio, pesos_sharpe = res_sharpe
-                    rend_m, vol_m, sharpe_m, pesos_min = res_min
-                    ret_sim, vol_sim, sharpe_sim = nube
-
+                    # MAGIA: Guardamos los resultados en la memoria de Streamlit
+                    st.session_state['datos_portafolio'] = resultados
+                    st.session_state['tickers_guardados'] = tickers_input
                     st.success("¡Optimización matemática completada exitosamente!")
-
-                    # --- MÉTRICAS VISUALES ---
-                    st.markdown("### Portafolio Óptimo (Máximo Ratio de Sharpe)")
-                    st.info("La combinación matemáticamente perfecta para maximizar el retorno por cada unidad de riesgo.")
                     
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Rendimiento Esperado Anual", f"{rend_s*100:.2f}%")
-                    c2.metric("Volatilidad Anual ($\sigma$)", f"{vol_s*100:.2f}%")
-                    c3.metric("Ratio de Sharpe", f"{sharpe_ratio:.4f}")
-
-                    # --- GRÁFICAS Y RESULTADOS ---
-                    # AQUÍ SE AGREGAN LAS DOS NUEVAS PESTAÑAS
-                    tab_frontera, tab_pesos, tab_historico, tab_var, tab_descargas = st.tabs([
-                        "Frontera Eficiente", 
-                        "Composición Óptima ($w_i$)", 
-                        "Desempeño Histórico",
-                        "Análisis de Riesgo (VaR)",
-                        "Exportar Datos"
-                    ])
-
-                    with tab_frontera:
-                        st.markdown("#### Gráfica Riesgo vs. Rendimiento")
-                        fig_ef = go.Figure()
-
-                        # Nube de puntos de simulación
-                        fig_ef.add_trace(go.Scatter(
-                            x=vol_sim, y=ret_sim, mode='markers',
-                            marker=dict(size=4, color=sharpe_sim, colorscale='Viridis', showscale=True, 
-                                        colorbar=dict(title="Sharpe Ratio")),
-                            text=[f"Rendimiento: {r*100:.2f}%<br>Riesgo: {v*100:.2f}%<br>Sharpe: {s:.2f}" 
-                                  for r, v, s in zip(ret_sim, vol_sim, sharpe_sim)],
-                            hoverinfo='text', name='Portafolios Posibles'
-                        ))
-
-                        # Estrella Roja: Max Sharpe
-                        fig_ef.add_trace(go.Scatter(
-                            x=[vol_s], y=[rend_s], mode='markers',
-                            marker=dict(symbol='star', size=16, color='red', line=dict(width=1, color='black')),
-                            name='Máximo Sharpe (Óptimo)'
-                        ))
-
-                        # Estrella Azul: Min Vol
-                        fig_ef.add_trace(go.Scatter(
-                            x=[vol_m], y=[rend_m], mode='markers',
-                            marker=dict(symbol='star', size=16, color='cyan', line=dict(width=1, color='black')),
-                            name='Mínima Varianza Global'
-                        ))
-
-                        fig_ef.update_layout(
-                            xaxis_title="Riesgo / Volatilidad Anualizada ($\sigma$)",
-                            yaxis_title="Rendimiento Esperado Anualizado ($E[R]$)",
-                            template="plotly_white", legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
-                            height=550
-                        )
-                        st.plotly_chart(fig_ef, use_container_width=True)
-
-                    with tab_pesos:
-                        st.markdown("#### Comparativa de Asignación de Capital ($w_i$)")
-                        st.caption("Observa cómo cambia la distribución de tu dinero dependiendo de si buscas rentabilidad o seguridad.")
-                        
-                        df_pesos = pd.DataFrame({
-                            'Máximo Sharpe (Rendimiento)': pesos_sharpe,
-                            'Mínima Varianza (Seguridad)': pesos_min
-                        }).fillna(0)
-                        
-                        df_melted = df_pesos.reset_index().melt(id_vars='index', var_name='Estrategia', value_name='Peso')
-                        df_melted.rename(columns={'index': 'Activo'}, inplace=True)
-                        df_melted = df_melted[df_melted['Peso'] > 0.001] 
-                        
-                        fig_pesos = px.bar(
-                            df_melted, y="Estrategia", x="Peso", color="Activo", orientation="h",
-                            text_auto=".1%", color_discrete_sequence=px.colors.qualitative.Vivid,
-                            title="Distribución del Portafolio"
-                        )
-                        fig_pesos.update_layout(
-                            xaxis_title="Porcentaje de Inversión", yaxis_title="",
-                            xaxis_tickformat=".0%", template="plotly_white", height=400,
-                            legend_title="Símbolos", barmode="stack"
-                        )
-                        fig_pesos.update_traces(textfont_size=13, textangle=0, textposition="inside", cliponaxis=False)
-                        st.plotly_chart(fig_pesos, use_container_width=True)
-
-                    with tab_historico:
-                        st.markdown("#### Precios Históricos Normalizados (Base 100)")
-                        st.caption("Evolución de cada activo si hubieras invertido $100 al inicio del periodo.")
-                        precios_norm = (data / data.iloc[0]) * 100
-                        fig_hist = px.line(precios_norm, x=precios_norm.index, y=precios_norm.columns,
-                                           labels={"value": "Valor de Inversión ($)", "Date": "Fecha"})
-                        fig_hist.update_layout(template="plotly_white", hovermode="x unified")
-                        st.plotly_chart(fig_hist, use_container_width=True)
-
-                    # ==========================================
-                    # NUEVA PESTAÑA: VaR y CVaR
-                    # ==========================================
-                    with tab_var:
-                        st.markdown("#### Análisis de Riesgo: VaR y CVaR")
-                        st.caption("Cálculo de la pérdida máxima esperada usando el modelo Paramétrico y Simulación de Monte Carlo (10,000 iteraciones).")
-                        
-                        # Controles del VaR
-                        col_v1, col_v2, col_v3 = st.columns(3)
-                        with col_v1:
-                            val_portafolio = st.number_input("Capital Invertido ($)", min_value=100.0, value=100000.0, step=10000.0)
-                        with col_v2:
-                            confianza_str = st.selectbox("Nivel de Confianza", ["95%", "99%"])
-                            confianza = 0.95 if confianza_str == "95%" else 0.99
-                        with col_v3:
-                            horizonte = st.selectbox("Horizonte de Tiempo", ["1 Día", "10 Días", "21 Días (1 Mes)"])
-                            dias_h = int(horizonte.split()[0])
-
-                        # Llamadas al motor financiero (Paramétrico y Monte Carlo)
-                        var_p_sharpe, _, _, _ = engine.calcular_var_parametrico(rend_s, vol_s, val_portafolio, confianza, dias_h)
-                        var_mc_sharpe, cvar_mc_sharpe = engine.calcular_var_cvar_montecarlo(rend_s, vol_s, val_portafolio, confianza, dias_h)
-                        
-                        var_p_min, _, _, _ = engine.calcular_var_parametrico(rend_m, vol_m, val_portafolio, confianza, dias_h)
-                        var_mc_min, cvar_mc_min = engine.calcular_var_cvar_montecarlo(rend_m, vol_m, val_portafolio, confianza, dias_h)
-
-                        st.write("---")
-                        
-                        # Resultados Max Sharpe
-                        st.markdown(f"##### Portafolio: Máximo Ratio de Sharpe (Rendimiento: {rend_s*100:.2f}%)")
-                        c_rs1, c_rs2, c_rs3 = st.columns(3)
-                        c_rs1.metric(f"VaR Paramétrico ({horizonte})", f"-${var_p_sharpe:,.2f}")
-                        c_rs2.metric(f"VaR Monte Carlo ({horizonte})", f"-${var_mc_sharpe:,.2f}")
-                        c_rs3.metric(f"CVaR Monte Carlo ({horizonte})", f"-${cvar_mc_sharpe:,.2f}", help="Expected Shortfall: Promedio de las peores pérdidas.")
-                                     
-                        st.write("") # Espacio
-                        
-                        # Resultados Min Varianza
-                        st.markdown(f"##### Portafolio: Mínima Varianza Global (Rendimiento: {rend_m*100:.2f}%)")
-                        c_rm1, c_rm2, c_rm3 = st.columns(3)
-                        c_rm1.metric(f"VaR Paramétrico ({horizonte})", f"-${var_p_min:,.2f}")
-                        c_rm2.metric(f"VaR Monte Carlo ({horizonte})", f"-${var_mc_min:,.2f}")
-                        c_rm3.metric(f"CVaR Monte Carlo ({horizonte})", f"-${cvar_mc_min:,.2f}")
-
-                        with st.expander("Metodología de Riesgo"):
-                            st.info("**1. VaR Paramétrico (Varianza-Covarianza):** Asume una distribución normal perfecta de los rendimientos usando la fórmula: $VaR = V_0(Z_\\alpha \sigma \sqrt{t} - \mu t)$.")
-                            st.success("**2. VaR Monte Carlo:** Genera 10,000 caminos aleatorios futuros y extrae el cuantil exacto de las pérdidas. Captura mejor los eventos extremos reales.")
-                            st.warning("**3. CVaR (Conditional VaR o Expected Shortfall):** El VaR dice 'perderás al menos X'. El CVaR responde a: 'si cruzamos ese umbral, ¿qué tan grave será la pérdida en promedio?'")
-
-                    # ==========================================
-                    # NUEVA PESTAÑA: DESCARGAS
-                    # ==========================================
-                    with tab_descargas:
-                        st.markdown("#### Descarga de Datos para Réplica en Excel o Python")
-                        st.caption("Exporta la matriz de precios o los vectores de pesos óptimos para comprobar los resultados manualmente.")
-                        
-                        col_d1, col_d2 = st.columns(2)
-                        
-                        # Preparar CSV de Precios (Data de Yahoo Finance)
-                        csv_precios = data.to_csv().encode('utf-8')
-                        
-                        # Preparar CSV de Pesos combinados
-                        df_pesos_csv = pd.DataFrame({
-                            'Máximo Sharpe': pesos_sharpe,
-                            'Mínima Varianza': pesos_min
-                        })
-                        df_pesos_csv.index.name = 'Ticker'
-                        csv_pesos = df_pesos_csv.to_csv().encode('utf-8')
-
-                        with col_d1:
-                            st.download_button(
-                                label="Descargar Precios Históricos (.csv)",
-                                data=csv_precios,
-                                file_name=f"precios_historicos_{hoy}.csv",
-                                mime="text/csv",
-                                use_container_width=True
-                            )
-                            st.write("*Incluye precios de cierre ajustados y limpios de NAs.*")
-                            
-                        with col_d2:
-                            st.download_button(
-                                label="Descargar Pesos Óptimos (.csv)",
-                                data=csv_pesos,
-                                file_name=f"pesos_optimos_{hoy}.csv",
-                                mime="text/csv",
-                                use_container_width=True
-                            )
-                            st.write("*Incluye los vectores $w_i$ de ambos portafolios.*")
-
                 except Exception as e:
                     st.error(f"Ocurrió un error al procesar los datos: {e}")
                     st.info("Verifica que los símbolos sean correctos, que haya conexión a internet y que el rango de fechas sea válido.")
+
+    # =================================================================
+    # FASE 2: VISUALIZACIÓN (Ocurre siempre que haya datos en la memoria)
+    # =================================================================
+    if 'datos_portafolio' in st.session_state:
+        
+        # Opcional: Avisar si el usuario escribió otros tickers pero no ha dado clic en optimizar
+        if st.session_state.get('tickers_guardados') != tickers_input:
+            st.warning(" Cambiaste los símbolos. Presiona 'Optimizar Portafolio' para actualizar los datos.")
+
+        # Desempaquetamos los datos guardados en la memoria
+        data, mu, S, res_sharpe, res_min, nube = st.session_state['datos_portafolio']
+        
+        rend_s, vol_s, sharpe_ratio, pesos_sharpe = res_sharpe
+        rend_m, vol_m, sharpe_m, pesos_min = res_min
+        ret_sim, vol_sim, sharpe_sim = nube
+
+        # --- MÉTRICAS VISUALES ---
+        st.markdown("### Portafolio Óptimo (Máximo Ratio de Sharpe)")
+        st.info("La combinación matemáticamente perfecta para maximizar el retorno por cada unidad de riesgo.")
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Rendimiento Esperado Anual", f"{rend_s*100:.2f}%")
+        c2.metric("Volatilidad Anual ($\sigma$)", f"{vol_s*100:.2f}%")
+        c3.metric("Ratio de Sharpe", f"{sharpe_ratio:.4f}")
+
+        # --- GRÁFICAS Y RESULTADOS ---
+        tab_frontera, tab_pesos, tab_historico, tab_var, tab_descargas = st.tabs([
+            "Frontera Eficiente", 
+            "Composición Óptima ($w_i$)", 
+            "Desempeño Histórico",
+            "Análisis de Riesgo (VaR)",
+            "Exportar Datos"
+        ])
+
+        with tab_frontera:
+            st.markdown("#### Gráfica Riesgo vs. Rendimiento")
+            fig_ef = go.Figure()
+
+            fig_ef.add_trace(go.Scatter(
+                x=vol_sim, y=ret_sim, mode='markers',
+                marker=dict(size=4, color=sharpe_sim, colorscale='Viridis', showscale=True, 
+                            colorbar=dict(title="Sharpe Ratio")),
+                text=[f"Rendimiento: {r*100:.2f}%<br>Riesgo: {v*100:.2f}%<br>Sharpe: {s:.2f}" 
+                      for r, v, s in zip(ret_sim, vol_sim, sharpe_sim)],
+                hoverinfo='text', name='Portafolios Posibles'
+            ))
+
+            fig_ef.add_trace(go.Scatter(
+                x=[vol_s], y=[rend_s], mode='markers',
+                marker=dict(symbol='star', size=16, color='red', line=dict(width=1, color='black')),
+                name='Máximo Sharpe (Óptimo)'
+            ))
+
+            fig_ef.add_trace(go.Scatter(
+                x=[vol_m], y=[rend_m], mode='markers',
+                marker=dict(symbol='star', size=16, color='cyan', line=dict(width=1, color='black')),
+                name='Mínima Varianza Global'
+            ))
+
+            fig_ef.update_layout(
+                xaxis_title="Riesgo / Volatilidad Anualizada ($\sigma$)",
+                yaxis_title="Rendimiento Esperado Anualizado ($E[R]$)",
+                template="plotly_white", legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+                height=550
+            )
+            st.plotly_chart(fig_ef, use_container_width=True)
+
+        with tab_pesos:
+            st.markdown("#### Comparativa de Asignación de Capital ($w_i$)")
+            st.caption("Observa cómo cambia la distribución de tu dinero dependiendo de si buscas rentabilidad o seguridad.")
+            
+            df_pesos = pd.DataFrame({
+                'Máximo Sharpe (Rendimiento)': pesos_sharpe,
+                'Mínima Varianza (Seguridad)': pesos_min
+            }).fillna(0)
+            
+            df_melted = df_pesos.reset_index().melt(id_vars='index', var_name='Estrategia', value_name='Peso')
+            df_melted.rename(columns={'index': 'Activo'}, inplace=True)
+            df_melted = df_melted[df_melted['Peso'] > 0.001] 
+            
+            fig_pesos = px.bar(
+                df_melted, y="Estrategia", x="Peso", color="Activo", orientation="h",
+                text_auto=".1%", color_discrete_sequence=px.colors.qualitative.Vivid,
+                title="Distribución del Portafolio"
+            )
+            fig_pesos.update_layout(
+                xaxis_title="Porcentaje de Inversión", yaxis_title="",
+                xaxis_tickformat=".0%", template="plotly_white", height=400,
+                legend_title="Símbolos", barmode="stack"
+            )
+            fig_pesos.update_traces(textfont_size=13, textangle=0, textposition="inside", cliponaxis=False)
+            st.plotly_chart(fig_pesos, use_container_width=True)
+
+        with tab_historico:
+            st.markdown("#### Precios Históricos Normalizados (Base 100)")
+            st.caption("Evolución de cada activo si hubieras invertido $100 al inicio del periodo.")
+            precios_norm = (data / data.iloc[0]) * 100
+            fig_hist = px.line(precios_norm, x=precios_norm.index, y=precios_norm.columns,
+                               labels={"value": "Valor de Inversión ($)", "Date": "Fecha"})
+            fig_hist.update_layout(template="plotly_white", hovermode="x unified")
+            st.plotly_chart(fig_hist, use_container_width=True)
+
+        with tab_var:
+            st.markdown("#### Análisis de Riesgo: VaR y CVaR")
+            st.caption("Cálculo de la pérdida máxima esperada en los horizontes de tiempo estándar de la industria.")
+            
+            col_v1, col_v2 = st.columns(2)
+            with col_v1:
+                val_portafolio = st.number_input("Capital Invertido ($)", min_value=100.0, value=100000.0, step=10000.0)
+            with col_v2:
+                confianza_str = st.selectbox("Nivel de Confianza", ["95%", "99%"])
+                confianza = 0.95 if confianza_str == "95%" else 0.99
+
+            st.write("---")
+            
+            # Función interna para armar la tabla de VaR
+            horizontes = [1, 10, 21]
+            nombres_horizontes = ["1 Día (Trading)", "10 Días (Regulatorio / Basilea)", "21 Días (1 Mes)"]
+            
+            def armar_tabla_riesgo(rend, vol, capital, conf):
+                filas = []
+                for h, nom in zip(horizontes, nombres_horizontes):
+                    var_p, _, _, _ = engine.calcular_var_parametrico(rend, vol, capital, conf, h)
+                    var_mc, cvar_mc = engine.calcular_var_cvar_montecarlo(rend, vol, capital, conf, h)
+                    filas.append({
+                        "Horizonte de Tiempo": nom,
+                        "VaR Paramétrico": f"-${var_p:,.2f}",
+                        "VaR Monte Carlo": f"-${var_mc:,.2f}",
+                        "CVaR Monte Carlo": f"-${cvar_mc:,.2f}"
+                    })
+                df = pd.DataFrame(filas).set_index("Horizonte de Tiempo")
+                return df
+
+            st.markdown(f"##### Portafolio: Máximo Ratio de Sharpe (Rendimiento Anual: {rend_s*100:.2f}%)")
+            df_sharpe = armar_tabla_riesgo(rend_s, vol_s, val_portafolio, confianza)
+            st.dataframe(df_sharpe, use_container_width=True)
+                         
+            st.write("") 
+            
+            st.markdown(f"##### Portafolio: Mínima Varianza Global (Rendimiento Anual: {rend_m*100:.2f}%)")
+            df_min = armar_tabla_riesgo(rend_m, vol_m, val_portafolio, confianza)
+            st.dataframe(df_min, use_container_width=True)
+
+            with st.expander("Estándares de la Industria y Metodología"):
+                st.markdown("**¿Por qué estos horizontes?**")
+                st.markdown("- **1 Día:** Usado por mesas de *trading* para medir el riesgo de mercado intradiario.")
+                st.markdown("- **10 Días:** El estándar regulatorio exigido por los acuerdos de **Basilea** para calcular el capital en riesgo de las instituciones financieras.")
+                st.markdown("- **21 Días (1 Mes):** Usado comúnmente en *Asset Management* para reportar el riesgo mensual a los inversionistas.")
+                st.write("---")
+                st.info("**1. VaR Paramétrico (Varianza-Covarianza):** Asume una distribución normal perfecta usando la fórmula: $VaR = V_0(Z_\\alpha \sigma \sqrt{t} - \mu t)$.")
+                st.success("**2. VaR Monte Carlo:** Genera 10,000 caminos aleatorios futuros y extrae el cuantil exacto de las pérdidas. Captura mejor los eventos extremos.")
+                st.warning("**3. CVaR (Expected Shortfall):** El VaR indica la pérdida mínima en el peor de los casos. El CVaR indica el *promedio* de las pérdidas si se cruza la barrera del VaR.")
+
+        with tab_descargas:
+            st.markdown("#### Descarga de Datos para Réplica en Excel o Python")
+            st.caption("Exporta la matriz de precios o los vectores de pesos óptimos para comprobar los resultados manualmente.")
+            
+            col_d1, col_d2 = st.columns(2)
+            
+            # Preparar CSVs
+            csv_precios = data.to_csv().encode('utf-8')
+            df_pesos_csv = pd.DataFrame({
+                'Máximo Sharpe': pesos_sharpe,
+                'Mínima Varianza': pesos_min
+            })
+            df_pesos_csv.index.name = 'Ticker'
+            csv_pesos = df_pesos_csv.to_csv().encode('utf-8')
+
+            with col_d1:
+                st.download_button(
+                    label="Descargar Precios Históricos (.csv)",
+                    data=csv_precios,
+                    file_name=f"precios_historicos_{hoy}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+                st.write("*Incluye precios de cierre ajustados y limpios de NAs.*")
+                
+            with col_d2:
+                st.download_button(
+                    label="Descargar Pesos Óptimos (.csv)",
+                    data=csv_pesos,
+                    file_name=f"pesos_optimos_{hoy}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+                st.write("*Incluye los vectores $w_i$ de ambos portafolios.*")
 # =============================================================================
 # 8. FORWARDS (DERIVADOS)
 # =============================================================================
