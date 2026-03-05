@@ -52,12 +52,15 @@ if opcion == "0. Portada e Índice":
     st.markdown("- **<a href='https://www.linkedin.com/in/owen-conde-a731b9249/' target='_blank' style='text-decoration: none; color: #2563EB;'>Owen Paredes Conde</a>**", unsafe_allow_html=True)
     
     st.write("---")
-    
+    st.markdown("### Dirigido por:")
+    st.markdown("- **<a href='https://www.linkedin.com/in/dr-francisco-garcía-castillo/' target='_blank' style='text-decoration: none; color: #2563EB;'>Dr. Francisco García Castillo</a>**", unsafe_allow_html=True)
+    st.write("---")
+
     # Descripción de la herramienta
     st.markdown("""
     Bienvenido a la Calculadora Financiera y Actuarial. Esta herramienta interactiva fue desarrollada en Python utilizando `Streamlit` 
     para automatizar y visualizar los cálculos más rigurosos de las matemáticas financieras, desde el valor del dinero en el tiempo 
-    hasta la valuación de derivados con el modelo de y Árboles Binomiales y Black-Scholes-Merton.
+    hasta la valuación de derivados con el modelo de Árboles Binomiales y Black-Scholes-Merton.
     
     *Aviso: Esta herramienta tiene fines netamente académicos y de demostración.*
     """)
@@ -1589,8 +1592,14 @@ elif opcion == "6. Valuación de Acciones":
 
 # =============================================================================
 # 7. PORTAFOLIOS EFICIENTES (MARKOWITZ)
+# =============================================================================# =============================================================================
+# 7. PORTAFOLIOS EFICIENTES (MARKOWITZ)
 # =============================================================================
 elif opcion == "7. Portafolios Eficientes":
+    import datetime
+    import plotly.graph_objects as go
+    import plotly.express as px
+    import pandas as pd
 
     st.markdown('<div class="section-header">7. Teoría de Portafolios (Frontera Eficiente)</div>', unsafe_allow_html=True)
     st.markdown("Optimización matemática exacta usando programación cuadrática y datos reales de la bolsa (Yahoo Finance).")
@@ -1637,7 +1646,14 @@ elif opcion == "7. Portafolios Eficientes":
                     c3.metric("Ratio de Sharpe", f"{sharpe_ratio:.4f}")
 
                     # --- GRÁFICAS Y RESULTADOS ---
-                    tab_frontera, tab_pesos, tab_historico = st.tabs(["Frontera Eficiente", "Composición Óptima ($w_i$)", "Desempeño Histórico"])
+                    # AQUÍ SE AGREGAN LAS DOS NUEVAS PESTAÑAS
+                    tab_frontera, tab_pesos, tab_historico, tab_var, tab_descargas = st.tabs([
+                        "Frontera Eficiente", 
+                        "Composición Óptima ($w_i$)", 
+                        "Desempeño Histórico",
+                        "Análisis de Riesgo (VaR)",
+                        "Exportar Datos"
+                    ])
 
                     with tab_frontera:
                         st.markdown("#### Gráfica Riesgo vs. Rendimiento")
@@ -1679,44 +1695,26 @@ elif opcion == "7. Portafolios Eficientes":
                         st.markdown("#### Comparativa de Asignación de Capital ($w_i$)")
                         st.caption("Observa cómo cambia la distribución de tu dinero dependiendo de si buscas rentabilidad o seguridad.")
                         
-                        # Unir los dos diccionarios en un solo DataFrame
                         df_pesos = pd.DataFrame({
                             'Máximo Sharpe (Rendimiento)': pesos_sharpe,
                             'Mínima Varianza (Seguridad)': pesos_min
                         }).fillna(0)
                         
-                        # Formatear la tabla para Plotly (Melt)
                         df_melted = df_pesos.reset_index().melt(id_vars='index', var_name='Estrategia', value_name='Peso')
                         df_melted.rename(columns={'index': 'Activo'}, inplace=True)
-                        
-                        # Filtrar activos con peso casi nulo (menor a 0.1%) para no saturar la gráfica
                         df_melted = df_melted[df_melted['Peso'] > 0.001] 
                         
-                        # Crear el gráfico de barras apiladas
                         fig_pesos = px.bar(
-                            df_melted, 
-                            y="Estrategia", 
-                            x="Peso", 
-                            color="Activo", 
-                            orientation="h",
-                            text_auto=".1%", # Muestra el porcentaje escrito dentro de la barra
-                            color_discrete_sequence=px.colors.qualitative.Vivid, # Paleta de alto contraste
+                            df_melted, y="Estrategia", x="Peso", color="Activo", orientation="h",
+                            text_auto=".1%", color_discrete_sequence=px.colors.qualitative.Vivid,
                             title="Distribución del Portafolio"
                         )
-                        
                         fig_pesos.update_layout(
-                            xaxis_title="Porcentaje de Inversión",
-                            yaxis_title="",
-                            xaxis_tickformat=".0%", # Formato de porcentaje en el eje X
-                            template="plotly_white",
-                            height=400,
-                            legend_title="Símbolos",
-                            barmode="stack"
+                            xaxis_title="Porcentaje de Inversión", yaxis_title="",
+                            xaxis_tickformat=".0%", template="plotly_white", height=400,
+                            legend_title="Símbolos", barmode="stack"
                         )
-                        
-                        # Ajustar el texto dentro de las barras para que se vea claro
                         fig_pesos.update_traces(textfont_size=13, textangle=0, textposition="inside", cliponaxis=False)
-                        
                         st.plotly_chart(fig_pesos, use_container_width=True)
 
                     with tab_historico:
@@ -1727,6 +1725,94 @@ elif opcion == "7. Portafolios Eficientes":
                                            labels={"value": "Valor de Inversión ($)", "Date": "Fecha"})
                         fig_hist.update_layout(template="plotly_white", hovermode="x unified")
                         st.plotly_chart(fig_hist, use_container_width=True)
+
+                    # ==========================================
+                    # NUEVA PESTAÑA: VaR y CVaR
+                    # ==========================================
+                    with tab_var:
+                        st.markdown("#### Análisis de Riesgo: VaR y CVaR")
+                        st.caption("Cálculo de la pérdida máxima esperada usando el modelo Paramétrico y Simulación de Monte Carlo (10,000 iteraciones).")
+                        
+                        # Controles del VaR
+                        col_v1, col_v2, col_v3 = st.columns(3)
+                        with col_v1:
+                            val_portafolio = st.number_input("Capital Invertido ($)", min_value=100.0, value=100000.0, step=10000.0)
+                        with col_v2:
+                            confianza_str = st.selectbox("Nivel de Confianza", ["95%", "99%"])
+                            confianza = 0.95 if confianza_str == "95%" else 0.99
+                        with col_v3:
+                            horizonte = st.selectbox("Horizonte de Tiempo", ["1 Día", "10 Días", "21 Días (1 Mes)"])
+                            dias_h = int(horizonte.split()[0])
+
+                        # Llamadas al motor financiero (Paramétrico y Monte Carlo)
+                        var_p_sharpe, _, _, _ = engine.calcular_var_parametrico(rend_s, vol_s, val_portafolio, confianza, dias_h)
+                        var_mc_sharpe, cvar_mc_sharpe = engine.calcular_var_cvar_montecarlo(rend_s, vol_s, val_portafolio, confianza, dias_h)
+                        
+                        var_p_min, _, _, _ = engine.calcular_var_parametrico(rend_m, vol_m, val_portafolio, confianza, dias_h)
+                        var_mc_min, cvar_mc_min = engine.calcular_var_cvar_montecarlo(rend_m, vol_m, val_portafolio, confianza, dias_h)
+
+                        st.write("---")
+                        
+                        # Resultados Max Sharpe
+                        st.markdown(f"##### Portafolio: Máximo Ratio de Sharpe (Rendimiento: {rend_s*100:.2f}%)")
+                        c_rs1, c_rs2, c_rs3 = st.columns(3)
+                        c_rs1.metric(f"VaR Paramétrico ({horizonte})", f"-${var_p_sharpe:,.2f}")
+                        c_rs2.metric(f"VaR Monte Carlo ({horizonte})", f"-${var_mc_sharpe:,.2f}")
+                        c_rs3.metric(f"CVaR Monte Carlo ({horizonte})", f"-${cvar_mc_sharpe:,.2f}", help="Expected Shortfall: Promedio de las peores pérdidas.")
+                                     
+                        st.write("") # Espacio
+                        
+                        # Resultados Min Varianza
+                        st.markdown(f"##### Portafolio: Mínima Varianza Global (Rendimiento: {rend_m*100:.2f}%)")
+                        c_rm1, c_rm2, c_rm3 = st.columns(3)
+                        c_rm1.metric(f"VaR Paramétrico ({horizonte})", f"-${var_p_min:,.2f}")
+                        c_rm2.metric(f"VaR Monte Carlo ({horizonte})", f"-${var_mc_min:,.2f}")
+                        c_rm3.metric(f"CVaR Monte Carlo ({horizonte})", f"-${cvar_mc_min:,.2f}")
+
+                        with st.expander("Metodología de Riesgo"):
+                            st.info("**1. VaR Paramétrico (Varianza-Covarianza):** Asume una distribución normal perfecta de los rendimientos usando la fórmula: $VaR = V_0(Z_\\alpha \sigma \sqrt{t} - \mu t)$.")
+                            st.success("**2. VaR Monte Carlo:** Genera 10,000 caminos aleatorios futuros y extrae el cuantil exacto de las pérdidas. Captura mejor los eventos extremos reales.")
+                            st.warning("**3. CVaR (Conditional VaR o Expected Shortfall):** El VaR dice 'perderás al menos X'. El CVaR responde a: 'si cruzamos ese umbral, ¿qué tan grave será la pérdida en promedio?'")
+
+                    # ==========================================
+                    # NUEVA PESTAÑA: DESCARGAS
+                    # ==========================================
+                    with tab_descargas:
+                        st.markdown("#### Descarga de Datos para Réplica en Excel o Python")
+                        st.caption("Exporta la matriz de precios o los vectores de pesos óptimos para comprobar los resultados manualmente.")
+                        
+                        col_d1, col_d2 = st.columns(2)
+                        
+                        # Preparar CSV de Precios (Data de Yahoo Finance)
+                        csv_precios = data.to_csv().encode('utf-8')
+                        
+                        # Preparar CSV de Pesos combinados
+                        df_pesos_csv = pd.DataFrame({
+                            'Máximo Sharpe': pesos_sharpe,
+                            'Mínima Varianza': pesos_min
+                        })
+                        df_pesos_csv.index.name = 'Ticker'
+                        csv_pesos = df_pesos_csv.to_csv().encode('utf-8')
+
+                        with col_d1:
+                            st.download_button(
+                                label="Descargar Precios Históricos (.csv)",
+                                data=csv_precios,
+                                file_name=f"precios_historicos_{hoy}.csv",
+                                mime="text/csv",
+                                use_container_width=True
+                            )
+                            st.write("*Incluye precios de cierre ajustados y limpios de NAs.*")
+                            
+                        with col_d2:
+                            st.download_button(
+                                label="Descargar Pesos Óptimos (.csv)",
+                                data=csv_pesos,
+                                file_name=f"pesos_optimos_{hoy}.csv",
+                                mime="text/csv",
+                                use_container_width=True
+                            )
+                            st.write("*Incluye los vectores $w_i$ de ambos portafolios.*")
 
                 except Exception as e:
                     st.error(f"Ocurrió un error al procesar los datos: {e}")
@@ -1960,17 +2046,53 @@ elif opcion == "9. Opciones (Derivados)":
     import numpy as np
     st.markdown('<div class="section-header">9. Valuación de Opciones Financieras</div>', unsafe_allow_html=True)
     
+    # --- BUSCADOR YAHOO FINANCE (OPCIONAL) ---
+    with st.expander("Opcional: Cargar datos reales de mercado (Yahoo Finance)"):
+        st.caption("Obtén el Precio Spot actual y calcula la Volatilidad Histórica Anualizada de cualquier activo real para auto-completar los parámetros.")
+        c_yf1, c_yf2 = st.columns([2, 1])
+        with c_yf1:
+            ticker_busqueda = st.text_input("Símbolo del activo (Ej. AAPL, TSLA, SPY):", "AAPL").strip().upper()
+        with c_yf2:
+            st.write("")
+            st.write("")
+            btn_buscar = st.button("Buscar en Mercado", use_container_width=True)
+            
+        if btn_buscar:
+            with st.spinner(f"Consultando datos para {ticker_busqueda}..."):
+                spot_yf, vol_yf = engine.obtener_datos_subyacente(ticker_busqueda)
+                if spot_yf is not None:
+                    st.session_state['opt_s'] = float(spot_yf)
+                    st.session_state['opt_k'] = float(spot_yf) # Sugerimos el Strike ATM (At-The-Money)
+                    st.session_state['opt_sigma'] = float(vol_yf * 100)
+                    
+                    st.success(f"¡Éxito! Spot: **${spot_yf:,.2f}** | Volatilidad Histórica: **{vol_yf*100:.2f}%**")
+                else:
+                    st.error("No se encontró el ticker o no hay historial suficiente (se requiere al menos 1 año).")
+
     st.markdown("#### Parámetros del Subyacente y Mercado")
+    
+    # 1. Inicializar la memoria por defecto (solo si no existe aún)
+    if 'opt_s' not in st.session_state:
+        st.session_state['opt_s'] = 100.0
+    if 'opt_k' not in st.session_state:
+        st.session_state['opt_k'] = 100.0
+    if 'opt_sigma' not in st.session_state:
+        st.session_state['opt_sigma'] = 20.0
+    
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        S_opt = st.number_input("Precio Spot Actual ($S_0$)", min_value=0.01, value=100.0, step=1.0, key="opt_s")
-        K_opt = st.number_input("Precio de Ejercicio ($K$)", min_value=0.01, value=100.0, step=1.0, key="opt_k")
+        # 2. Le quitamos el parámetro 'value=' a las cajas controladas por la memoria
+        S_opt = st.number_input("Precio Spot Actual ($S_0$)", min_value=0.01, step=1.0, key="opt_s")
+        K_opt = st.number_input("Precio de Ejercicio ($K$)", min_value=0.01, step=1.0, key="opt_k")
     with col2:
+        # Esta caja NO la controla Yahoo, así que sí lleva 'value='
         T_opt = st.number_input("Tiempo al vencimiento ($T$ en años)", min_value=0.01, value=1.0, step=0.1, key="opt_t")
         r_opt = st.number_input("Tasa libre de riesgo continua ($r$) %", value=5.0, step=0.1, key="opt_r") / 100
     with col3:
-        sigma_opt = st.number_input("Volatilidad Anual ($\sigma$) %", min_value=0.1, value=20.0, step=1.0, key="opt_sigma") / 100
+        # Le quitamos el parámetro 'value='
+        sigma_opt = st.number_input("Volatilidad Anual ($\sigma$) %", min_value=0.1, step=1.0, key="opt_sigma") / 100
+
 
     st.write("---")
     
@@ -2103,7 +2225,7 @@ elif opcion == "9. Opciones (Derivados)":
             st.latex(f_put)
             st.latex(r"d_2 = d_1 - \sigma \sqrt{T}")
 
-        # --- DESARROLLO PASO A PASO (BSM) ---# --- DESARROLLO PASO A PASO (BSM) ---
+        # --- DESARROLLO PASO A PASO (BSM) ---
         with st.expander("Ver desarrollo paso a paso del modelo Black-Scholes-Merton"):
             st.info("**1. Cálculo de los parámetros de probabilidad ($d_1$ y $d_2$):**")
             
@@ -2276,7 +2398,7 @@ elif opcion == "10. Formulario":
         <body>
             <h1>{titulo}</h1>
             {contenido_cuerpo}
-            <div class="footer">Generado automáticamente por la Calculadora Actuarial. ¡Mucho éxito!</div>
+            <div class="footer">Generado automáticamente por la Calculadora Actuarial de Owen ¡Mucho éxito!</div>
         </body>
         </html>
         """

@@ -599,3 +599,51 @@ class FinancialMathEngine:
                     V_tree[i][j] = val_hold
                     
         return V_tree[0][0], (S_tree, V_tree)
+    
+    def obtener_datos_subyacente(self, ticker_symbol):
+        """
+        Consulta Yahoo Finance para obtener el precio Spot actual
+        y calcula la volatilidad histórica anualizada (252 días).
+        """
+        import yfinance as yf
+        import numpy as np
+        
+        try:
+            ticker = yf.Ticker(ticker_symbol)
+            hist = ticker.history(period="1y")
+            
+            if hist.empty or len(hist) < 20:
+                return None, None
+                
+            # Último precio de cierre (Spot)
+            spot_price = hist['Close'].iloc[-1]
+            
+            # Cálculo de volatilidad histórica anualizada
+            retornos_log = np.log(hist['Close'] / hist['Close'].shift(1))
+            volatilidad_hist = retornos_log.std() * np.sqrt(252)
+            
+            return spot_price, volatilidad_hist
+            
+        except Exception as e:
+            return None, None
+
+    def calcular_var_parametrico(self, rend_anual, vol_anual, valor_portafolio, nivel_confianza, dias_horizonte):
+        t = dias_horizonte / 252.0
+        rend_periodo = rend_anual * t
+        vol_periodo = vol_anual * np.sqrt(t)
+        z_score = norm.ppf(nivel_confianza)
+        var_monto = valor_portafolio * (z_score * vol_periodo - rend_periodo)
+        return max(var_monto, 0), z_score, rend_periodo, vol_periodo
+
+    def calcular_var_cvar_montecarlo(self, rend_anual, vol_anual, valor_portafolio, nivel_confianza, dias_horizonte, simulaciones=10000):
+        t = dias_horizonte / 252.0
+        rend_periodo = rend_anual * t
+        vol_periodo = vol_anual * np.sqrt(t)
+        e = np.random.normal(0, 1, size=simulaciones)
+        simulacion_retornos = rend_periodo + vol_periodo * e
+        sim_ordenada = np.sort(simulacion_retornos)
+        alpha = 1.0 - nivel_confianza
+        k = max(int(np.ceil(alpha * simulaciones)), 1)
+        q_alpha = sim_ordenada[k - 1]
+        cvar_alpha = sim_ordenada[:k - 1].mean()
+        return max(-q_alpha * valor_portafolio, 0), max(-cvar_alpha * valor_portafolio, 0)
