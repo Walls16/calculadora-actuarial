@@ -1273,7 +1273,6 @@ elif opcion == "4. Tabla de Amortización":
             )
             
     with tab_grafica:
-            import plotly.express as px
             fig = px.bar(df_amort, 
                         x="Periodo", 
                         y=["Amortización", "Interés"], 
@@ -1934,7 +1933,6 @@ elif opcion == "8. Riesgo Portafolios":
 # 9. FORWARDS (DERIVADOS)
 # =============================================================================
 elif opcion == "9. Forwards (Derivados)":
-    import numpy as np
     st.markdown('<div class="section-header">8. Forwards (Precio y Valuación)</div>', unsafe_allow_html=True)
     
     tipo_cap = st.radio("Tipo de Capitalización:", ["Continua", "Discreta"], horizontal=True, key="fwd_cap_global")
@@ -2156,7 +2154,6 @@ elif opcion == "9. Forwards (Derivados)":
 # 10. OPCIONES FINANCIERAS 
 # =============================================================================
 elif opcion == "10. Opciones (Derivados)":
-    import numpy as np
     st.markdown('<div class="section-header">9. Valuación de Opciones Financieras</div>', unsafe_allow_html=True)
     
     # --- BUSCADOR YAHOO FINANCE (OPCIONAL) ---
@@ -2292,7 +2289,6 @@ elif opcion == "10. Opciones (Derivados)":
 
         call_price, put_price, d1_res, d2_res = engine.opciones_bsm(modelo_cod, S_opt, K_opt, T_opt, r_opt, sigma_opt, extra_val)
 
-        from scipy.stats import norm
         Nd1 = norm.cdf(d1_res)
         Nd2 = norm.cdf(d2_res)
         N_minus_d1 = norm.cdf(-d1_res)
@@ -2401,7 +2397,6 @@ elif opcion == "10. Opciones (Derivados)":
     # MÉTODO 2: BINOMIAL (CRR)
     # =========================================================
     else:
-        import plotly.graph_objects as go
         
         st.info(" **Modelo de Árbol Binomial (Cox-Ross-Rubinstein)**. Permite valuar el ejercicio anticipado (Estilo Americano).")
         
