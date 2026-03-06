@@ -82,9 +82,10 @@ if opcion == "0. Portada e Índice":
     with idx2:
         st.success("**6. Valuación de Acciones**\n\nModelo de Gordon-Shapiro y valuación relativa por múltiplos de mercado.")
         st.success("**7. Portafolios Eficientes**\n\nOptimización de carteras con el modelo de Markowitz.")
-        st.success("**8. Forwards y Futuros**\n\nDeterminación de precios teóricos y valuación de contratos.")
-        st.success("**9. Opciones (Derivados)**\n\nPrimas y Griegas con Black-Scholes-Merton y Árboles Binomiales (CRR).")
-        st.success("**10. Formulario Oficial**\n\nCheat-sheet descargable en HTML con todas las ecuaciones matemáticas utilizadas.")
+        st.success("**8. Riesgo de Portafolios**\n\nCálculo de VaR y CVaR con simulación histórica y Monte Carlo.")
+        st.success("**9. Forwards y Futuros**\n\nDeterminación de precios teóricos y valuación de contratos.")
+        st.success("**10. Opciones (Derivados)**\n\nPrimas y Griegas con Black-Scholes-Merton y Árboles Binomiales (CRR).")
+        st.success("**11. Formulario Oficial**\n\nCheat-sheet descargable en HTML con todas las ecuaciones matemáticas utilizadas.")
 
 
     # =============================================================================
