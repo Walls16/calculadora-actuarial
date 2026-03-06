@@ -71,21 +71,23 @@ if opcion == "0. Portada e Índice":
     # Índice Visual
     st.markdown("### Mapa de la Calculadora (Usa el menú lateral para navegar)")
     
-    idx1, idx2 = st.columns(2)
+    idx1, idx2, idx3 = st.columns(3)
     with idx1:
         st.info("**1. Tasas de Interés**\n\nTasas nominales, efectivas, continuas.")
         st.info("**2. Valor del Dinero**\n\nCálculos de Interés Compuesto y Tasas continuas, Valor presente y futuro.")
         st.info("**3. Rentas y Anualidades**\n\nRentas vencidas, anticipadas, diferidas y crecientes aritméticos y geométricos.")
         st.info("**4. Tabla de Amortización**\n\nTablas dinámicas para créditos y fondos de amortización.")
-        st.info("**5. Valuación de Bonos**\n\nCálculo de precio limpio, sucio y Yield to Maturity.")
         
     with idx2:
+        st.success("**5. Valuación de Bonos**\n\nCálculo de precio limpio, sucio y Yield to Maturity.")
         st.success("**6. Valuación de Acciones**\n\nModelo de Gordon-Shapiro y valuación relativa por múltiplos de mercado.")
         st.success("**7. Portafolios Eficientes**\n\nOptimización de carteras con el modelo de Markowitz.")
         st.success("**8. Riesgo de Portafolios**\n\nCálculo de VaR y CVaR con simulación histórica y Monte Carlo.")
-        st.success("**9. Forwards y Futuros**\n\nDeterminación de precios teóricos y valuación de contratos.")
-        st.success("**10. Opciones (Derivados)**\n\nPrimas y Griegas con Black-Scholes-Merton y Árboles Binomiales (CRR).")
-        st.success("**11. Formulario Oficial**\n\nCheat-sheet descargable en HTML con todas las ecuaciones matemáticas utilizadas.")
+
+    with idx3:
+        st.error("**9. Forwards y Futuros**\n\nDeterminación de precios teóricos y valuación de contratos.")
+        st.error("**10. Opciones (Derivados)**\n\nPrimas y Griegas con Black-Scholes-Merton y Árboles Binomiales (CRR).")
+        st.error("**11. Formulario Oficial**\n\nCheat-sheet descargable en HTML con todas las ecuaciones matemáticas utilizadas.")
 
 
     # =============================================================================
@@ -1758,9 +1760,9 @@ elif opcion == "7. Portafolios Eficientes":
                     var_mc, cvar_mc = engine.calcular_var_cvar_montecarlo(rend, vol, capital, conf, h)
                     filas.append({
                         "Horizonte de Tiempo": nom,
-                        "VaR Paramétrico": f"-${var_p:,.2f}",
-                        "VaR Monte Carlo": f"-${var_mc:,.2f}",
-                        "CVaR Monte Carlo": f"-${cvar_mc:,.2f}"
+                        "VaR Paramétrico": f"${var_p:,.2f}",
+                        "VaR Monte Carlo": f"${var_mc:,.2f}",
+                        "CVaR Monte Carlo": f"${cvar_mc:,.2f}"
                     })
                 df = pd.DataFrame(filas).set_index("Horizonte de Tiempo")
                 return df
@@ -1908,9 +1910,9 @@ elif opcion == "8. Riesgo Portafolios":
                 
                 st.markdown(f"### Valor en Riesgo a **{horizonte}**")
                 col_res1, col_res2, col_res3 = st.columns(3)
-                col_res1.metric("VaR Paramétrico", f"-${var_p:,.2f}")
-                col_res2.metric("VaR Monte Carlo", f"-${var_mc:,.2f}")
-                col_res3.metric("CVaR (Expected Shortfall)", f"-${cvar_mc:,.2f}")
+                col_res1.metric("VaR Paramétrico", f"${var_p:,.2f}")
+                col_res2.metric("VaR Monte Carlo", f"${var_mc:,.2f}")
+                col_res3.metric("CVaR (Expected Shortfall)", f"${cvar_mc:,.2f}")
 
                 # Gráfica de distribución real para validar visualmente
                 st.markdown("#### Composición Efectiva del Portafolio")

@@ -245,7 +245,6 @@ class FinancialMathEngine:
 
     # --- SOLVER PARA NÚMERO DE PERIODOS (ARITMÉTICOS) ---
     def nper_gradiente_arit_vf(self, VF, R1, G, i_m):
-        import scipy.optimize as opt
         f = lambda n: self.vf_gradiente_aritmetico(R1, G, i_m, n) - VF
         try:
             res = opt.root_scalar(f, bracket=[0.0001, 2000], method='brentq')
@@ -254,7 +253,6 @@ class FinancialMathEngine:
             return np.nan
 
     def nper_gradiente_arit_vp(self, VP, R1, G, i_m):
-        import scipy.optimize as opt
         f = lambda n: self.vp_gradiente_aritmetico(R1, G, i_m, n) - VP
         try:
             res = opt.root_scalar(f, bracket=[0.0001, 2000], method='brentq')
@@ -321,13 +319,6 @@ class FinancialMathEngine:
         return precio_total, cupon_Fr, vp_cupones, vp_redencion
 
     def tasa_rendimiento_bono(self, P, F, r_m, C, n):
-            """
-            Encuentra la Tasa de Rendimiento periódica (i_m) dado un precio de mercado P.
-            (Conocida en inglés como Yield to Maturity o YTM).
-            """
-            import scipy.optimize as opt
-            import numpy as np
-            
             # La función objetivo es: Precio Calculado(i) - Precio de Mercado = 0
             def f(i):
                 if i == 0:
@@ -378,7 +369,6 @@ class FinancialMathEngine:
         return vp_total
 
     def optimizacion_markowitz(self, tickers_list, start_date, end_date, r_f=0.05):
-        # 1. Descargar datos de Yahoo Finance
         raw_data = yf.download(tickers_list, start=start_date, end=end_date)
         
         # Validar la estructura de los datos devueltos por Yahoo Finance
@@ -554,8 +544,6 @@ class FinancialMathEngine:
         return delta_call, delta_put, gamma, vega, theta_call, theta_put, rho_call, rho_put
 # --- MODELO BINOMIAL (CRR) ---
     def binomial_tree(self, S, K, T, r, sigma, n, q=0.0, tipo='call', american=False):
-        """Devuelve precio y datos para graficar el árbol (Cox-Ross-Rubinstein)."""
-        import numpy as np
         
         tipo = tipo.lower().strip() # Protegemos contra errores de dedo (ej. 'Call ')
         dt = T / n
@@ -569,26 +557,25 @@ class FinancialMathEngine:
         S_tree = [np.zeros(i + 1) for i in range(n + 1)]
         V_tree = [np.zeros(i + 1) for i in range(n + 1)]
         
-        # 1. Árbol de Precios (Forward Trajectory)
+        # 1. Árbol de Precios 
         for i in range(n + 1):
             for j in range(i + 1):
                 S_tree[i][j] = S * (u ** (i - j)) * (d ** j)
                 
-        # 2. Payoff al vencimiento (Boundary Conditions)
+        # 2. Payoff al vencimiento 
         for j in range(n + 1):
             if tipo == 'call':
                 V_tree[n][j] = max(0, S_tree[n][j] - K)
             else:
                 V_tree[n][j] = max(0, K - S_tree[n][j])
                 
-        # 3. Inducción hacia atrás (Backward Induction)
+        # 3. Inducción hacia atrás 
         df = np.exp(-r * dt)
         for i in range(n - 1, -1, -1):
             for j in range(i + 1):
                 val_hold = df * (p * V_tree[i + 1][j] + (1 - p) * V_tree[i + 1][j + 1])
                 
                 if american:
-                    # CORRECCIÓN: Aseguramos la cota cero en el valor intrínseco
                     if tipo == 'call':
                         val_exercise = max(0, S_tree[i][j] - K)
                     else:
@@ -601,12 +588,6 @@ class FinancialMathEngine:
         return V_tree[0][0], (S_tree, V_tree)
     
     def obtener_datos_subyacente(self, ticker_symbol):
-        """
-        Consulta Yahoo Finance para obtener el precio Spot actual
-        y calcula la volatilidad histórica anualizada (252 días).
-        """
-        import yfinance as yf
-        import numpy as np
         
         try:
             ticker = yf.Ticker(ticker_symbol)
