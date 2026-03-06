@@ -29,9 +29,10 @@ opcion = st.sidebar.radio("Módulos Disponibles", [
     "5. Valuación de Bonos",
     "6. Valuación de Acciones",
     "7. Portafolios Eficientes",
-    "8. Forwards (Derivados)",
-    "9. Opciones (Derivados)", 
-    "10. Formulario"
+    "8. Riesgo Portafolios",
+    "9. Forwards (Derivados)",
+    "10. Opciones (Derivados)", 
+    "11. Formulario"
 ])
 
 if opcion != "0. Portada e Índice":
@@ -1827,10 +1828,116 @@ elif opcion == "7. Portafolios Eficientes":
                     use_container_width=True
                 )
                 st.write("*Incluye los vectores $w_i$ de ambos portafolios.*")
+
 # =============================================================================
-# 8. FORWARDS (DERIVADOS)
+# 8. ANÁLISIS DE RIESGO (PORTAFOLIO PERSONALIZADO)
 # =============================================================================
-elif opcion == "8. Forwards (Derivados)":
+elif opcion == "8. Riesgo Portafolios":
+
+    st.markdown('<div class="section-header">8. Análisis de Riesgo en Portafolios Personalizados</div>', unsafe_allow_html=True)
+    st.markdown("Evalúa el rendimiento esperado y el VaR/CVaR de tu propia mezcla de inversión real, sin depender de la optimización perfecta.")
+
+    # --- 1. SELECCIÓN DE ACTIVOS ---
+    with st.expander("1. Seleccionar Activos y Periodo", expanded=True):
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            tickers_str = st.text_input("Símbolos (separados por coma):", value="AAPL, MSFT, META")
+        with c2:
+            hoy = datetime.date.today()
+            fecha_inicio = st.date_input("Fecha de Inicio (Histórico)", value=hoy - datetime.timedelta(days=365*3))
+            
+    tickers_list = [t.strip().upper() for t in tickers_str.split(",") if t.strip()]
+            
+    # --- 2. TABLA INTERACTIVA DE PESOS ---
+    st.markdown("#### 2. Asignar Ponderaciones Manuales")
+    st.caption("Haz clic en las celdas de la columna **'Peso (%)'** para ajustar el porcentaje de cada activo.")
+    
+    if len(tickers_list) > 0:
+        # Repartir pesos equitativamente al inicio
+        peso_eq = 100.0 / len(tickers_list)
+        df_pesos_ini = pd.DataFrame({
+            "Ticker": tickers_list,
+            "Peso (%)": [peso_eq] * len(tickers_list)
+        })
+        
+        # Tabla Mágica Editable de Streamlit
+        df_pesos_editado = st.data_editor(
+            df_pesos_ini, 
+            hide_index=True, 
+            use_container_width=True,
+            column_config={
+                "Peso (%)": st.column_config.NumberColumn("Peso (%)", min_value=0.0, max_value=100.0, step=1.0, format="%.2f%%")
+            }
+        )
+        
+        suma_pesos = df_pesos_editado["Peso (%)"].sum()
+        if abs(suma_pesos - 100.0) > 0.1:
+            st.warning(f" Tus porcentajes suman **{suma_pesos:.1f}%**. El modelo los ajustará proporcionalmente al 100% para el cálculo de riesgo.")
+
+    st.write("---")
+
+    # --- 3. CONFIGURACIÓN DEL VaR Y EJECUCIÓN ---
+    st.markdown("#### 3. Configurar Escenario de Riesgo")
+    col_r1, col_r2, col_r3 = st.columns(3)
+    with col_r1:
+        val_portafolio = st.number_input("Capital Total Invertido ($)", min_value=100.0, value=100000.0, step=10000.0)
+    with col_r2:
+        confianza_str = st.selectbox("Nivel de Confianza", ["95%", "99%"], index=1) # Por defecto 99%
+        confianza = 0.95 if confianza_str == "95%" else 0.99
+    with col_r3:
+        horizonte = st.selectbox("Horizonte de Tiempo", ["1 Día", "10 Días", "21 Días (1 Mes)"], index=1)
+        dias_h = int(horizonte.split()[0])
+        
+    ejecutar_riesgo = st.button(" Calcular Métricas de Riesgo", use_container_width=True)
+    
+    if ejecutar_riesgo and len(tickers_list) > 0:
+        # Convertimos la tabla a un diccionario para el motor { 'AAPL': 0.40, 'MSFT': 0.60 }
+        dict_pesos = dict(zip(df_pesos_editado["Ticker"], df_pesos_editado["Peso (%)"] / 100.0))
+        
+        with st.spinner("Descargando precios, cruzando matrices y simulando Monte Carlo..."):
+            try:
+                # Llamamos a la nueva función
+                data, rend_p, vol_p, pesos_reales, cols_reales = engine.evaluar_portafolio_personalizado(
+                    tickers_list, dict_pesos, fecha_inicio, hoy
+                )
+                
+                # --- RESULTADOS FINALES ---
+                st.success("¡Análisis completado!")
+                
+                st.markdown("### Perfil del Portafolio")
+                c_m1, c_m2, c_m3 = st.columns(3)
+                c_m1.metric("Rendimiento Esperado Anual", f"{rend_p*100:.2f}%")
+                c_m2.metric("Volatilidad Anual ($\sigma$)", f"{vol_p*100:.2f}%")
+                # Asumimos tasa libre de riesgo de 5% para el Sharpe referencial
+                c_m3.metric("Ratio de Sharpe", f"{(rend_p - 0.05)/vol_p:.4f}", help="Tasa libre de riesgo asumida: 5%")
+                
+                # Calculamos el Riesgo usando tus funciones
+                var_p, _, _, _ = engine.calcular_var_parametrico(rend_p, vol_p, val_portafolio, confianza, dias_h)
+                var_mc, cvar_mc = engine.calcular_var_cvar_montecarlo(rend_p, vol_p, val_portafolio, confianza, dias_h)
+                
+                st.markdown(f"### Valor en Riesgo a **{horizonte}**")
+                col_res1, col_res2, col_res3 = st.columns(3)
+                col_res1.metric("VaR Paramétrico", f"-${var_p:,.2f}")
+                col_res2.metric("VaR Monte Carlo", f"-${var_mc:,.2f}")
+                col_res3.metric("CVaR (Expected Shortfall)", f"-${cvar_mc:,.2f}")
+
+                # Gráfica de distribución real para validar visualmente
+                st.markdown("#### Composición Efectiva del Portafolio")
+                df_pie = pd.DataFrame({"Activo": cols_reales, "Peso": pesos_reales})
+                df_pie = df_pie[df_pie['Peso'] > 0.001]
+                
+                fig_pie = px.pie(df_pie, values='Peso', names='Activo', hole=0.4, 
+                                 color_discrete_sequence=px.colors.qualitative.Vivid)
+                fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_pie.update_layout(template="plotly_white", margin=dict(t=0, b=0, l=0, r=0), height=350)
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+            except Exception as e:
+                st.error(f"Error en el cálculo: {e}")
+# =============================================================================
+# 9. FORWARDS (DERIVADOS)
+# =============================================================================
+elif opcion == "9. Forwards (Derivados)":
     import numpy as np
     st.markdown('<div class="section-header">8. Forwards (Precio y Valuación)</div>', unsafe_allow_html=True)
     
@@ -2050,9 +2157,9 @@ elif opcion == "8. Forwards (Derivados)":
                     
             st.success(f"**Valor del contrato para la posición {posicion.split()[0]}: $f = {valor_fwd:,.4f}**")
 # =============================================================================
-# 9. OPCIONES FINANCIERAS 
+# 10. OPCIONES FINANCIERAS 
 # =============================================================================
-elif opcion == "9. Opciones (Derivados)":
+elif opcion == "10. Opciones (Derivados)":
     import numpy as np
     st.markdown('<div class="section-header">9. Valuación de Opciones Financieras</div>', unsafe_allow_html=True)
     
@@ -2370,9 +2477,9 @@ elif opcion == "9. Opciones (Derivados)":
             st.plotly_chart(fig, use_container_width=True)
             st.caption("Los nodos muestran el precio del subyacente (S) y el valor de la prima (V) en ese instante.")
 # =============================================================================
-# 10. FORMULARIO 
+# 11. FORMULARIO 
 # =============================================================================
-elif opcion == "10. Formulario":
+elif opcion == "11. Formulario":
     st.markdown('<div class="section-header">Formulario Oficial de Matemáticas Financieras</div>', unsafe_allow_html=True)
     
     st.write("Explora las fórmulas por categoría. Al final de cada pestaña encontrarás un botón para descargar únicamente el formulario de esa sección en formato HTML interactivo.")

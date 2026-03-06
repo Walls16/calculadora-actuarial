@@ -647,3 +647,26 @@ class FinancialMathEngine:
         q_alpha = sim_ordenada[k - 1]
         cvar_alpha = sim_ordenada[:k - 1].mean()
         return max(-q_alpha * valor_portafolio, 0), max(-cvar_alpha * valor_portafolio, 0)
+    
+    def evaluar_portafolio_personalizado(self, tickers_list, dict_pesos, start_date, end_date):
+        raw_data = yf.download(tickers_list, start=start_date, end=end_date)
+        if 'Adj Close' in raw_data: data = raw_data['Adj Close']
+        elif 'Close' in raw_data: data = raw_data['Close']
+        else: data = raw_data
+
+        data = data.ffill().dropna()
+        if isinstance(data, pd.Series): data = data.to_frame(name=tickers_list[0])
+
+        mu = expected_returns.mean_historical_return(data)
+        S = risk_models.sample_cov(data)
+
+        pesos_array = np.array([dict_pesos.get(c, 0) for c in data.columns])
+        
+        suma = pesos_array.sum()
+        if suma > 0:
+            pesos_array = pesos_array / suma
+            
+        rend_p = np.dot(pesos_array, mu)
+        vol_p = np.sqrt(np.dot(pesos_array.T, np.dot(S, pesos_array)))
+        
+        return data, rend_p, vol_p, pesos_array, data.columns
