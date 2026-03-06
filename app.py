@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import datetime
 from financial_engine import FinancialMathEngine
-
+from scipy.stats import norm
 
 st.set_page_config(page_title="Calculadora Financiera", layout="wide", page_icon="🧮")
 engine = FinancialMathEngine()
@@ -273,10 +273,7 @@ if opcion == "1. Tasas de Interés":
 
         # --- 2. GRÁFICA CON BOLITAS DE COLORES ---
         st.subheader("Gráfica de Convergencia")
-        
-        import plotly.graph_objects as go
-        import plotly.express as px
-        
+          
         fig = px.scatter(df_reinversion, 
                          x="Periodo de reinversión", 
                          y="Monto acumulado", 
@@ -317,7 +314,6 @@ if opcion == "1. Tasas de Interés":
 # 2. VALOR DEL DINERO EN EL TIEMPO
 # =============================================================================
 elif opcion == "2. Valor del Dinero":
-    import numpy as np
     st.markdown('<div class="section-header">2. Valor del Dinero en el Tiempo</div>', unsafe_allow_html=True)
     
     t1, t2, t3, t4 = st.tabs(["Valor Futuro", "Valor Presente", "Número de Periodos", "Tasa de Rendimiento"])
@@ -536,7 +532,6 @@ elif opcion == "2. Valor del Dinero":
 # 3. RENTAS Y ANUALIDADES (Fusionado con Gradientes)
 # =============================================================================
 elif opcion == "3. Rentas y Anualidades":
-    import numpy as np
     st.markdown('<div class="section-header">3. Valuación de Rentas y Anualidades</div>', unsafe_allow_html=True)
     
     tab_vf, tab_vp, tab_n = st.tabs(["Valor Futuro de Rentas", "Valor Presente de Rentas", "Número de Periodos (n)"])
