@@ -49,14 +49,16 @@ if opcion == "0. Portada e Índice":
     
     # Créditos
     # =============================================================================
-    st.markdown("#### Desarrollado por:")
-    st.markdown("- **<a href='https://www.linkedin.com/in/owen-conde-a731b9249/' target='_blank' style='text-decoration: none; color: #2563EB;'>Owen Paredes Conde</a>**", unsafe_allow_html=True)
+    c_cred1, c_cred2 = st.columns(2)
+    with c_cred1:
+        st.markdown("#### Desarrollado por:")
+        st.markdown("- **<a href='https://www.linkedin.com/in/owen-conde-a731b9249/' target='_blank' style='text-decoration: none; color: #2563EB;'>Owen Paredes Conde</a>**", unsafe_allow_html=True)
     
+    with c_cred2:
+        st.markdown("#### Dirigido por:")
+        st.markdown("- **<a href='https://www.linkedin.com/in/dr-francisco-garcía-castillo/' target='_blank' style='text-decoration: none; color: #2563EB;'>Dr. Francisco García Castillo</a>**", unsafe_allow_html=True)
+        
     st.write("---")
-    st.markdown("### Dirigido por:")
-    st.markdown("- **<a href='https://www.linkedin.com/in/dr-francisco-garcía-castillo/' target='_blank' style='text-decoration: none; color: #2563EB;'>Dr. Francisco García Castillo</a>**", unsafe_allow_html=True)
-    st.write("---")
-
     # Descripción de la herramienta
     st.markdown("""
     Bienvenido a la Calculadora Financiera y Actuarial. Esta herramienta interactiva fue desarrollada en Python utilizando `Streamlit` 
@@ -85,9 +87,9 @@ if opcion == "0. Portada e Índice":
         st.success("**8. Riesgo de Portafolios**\n\nCálculo de VaR y CVaR con simulación histórica y Monte Carlo.")
 
     with idx3:
-        st.error("**9. Forwards y Futuros**\n\nDeterminación de precios teóricos y valuación de contratos.")
-        st.error("**10. Opciones (Derivados)**\n\nPrimas y Griegas con Black-Scholes-Merton y Árboles Binomiales (CRR).")
-        st.error("**11. Formulario Oficial**\n\nCheat-sheet descargable en HTML con todas las ecuaciones matemáticas utilizadas.")
+        st.warning("**9. Forwards y Futuros**\n\nDeterminación de precios teóricos y valuación de contratos.")
+        st.warning("**10. Opciones (Derivados)**\n\nPrimas y Griegas con Black-Scholes-Merton y Árboles Binomiales (CRR).")
+        st.warning("**11. Formulario Oficial**\n\nCheat-sheet descargable en HTML con todas las ecuaciones matemáticas utilizadas.")
 
 
     # =============================================================================
@@ -1349,6 +1351,9 @@ elif opcion == "5. Valuación de Bonos":
     st.write("---")
     st.markdown("### Resultados de la Valuación")
 
+    i_final = None # Variable para guardar la tasa final y calcular el riesgo
+    p_final = None # Variable para guardar el precio final
+
     # ==========================================
     # CASO A: CALCULAR PRECIO
     # ==========================================
@@ -1361,6 +1366,8 @@ elif opcion == "5. Valuación de Bonos":
             str_val_i_mercado = rf"{i_periodo_bono:.6f}"
 
         precio_P, _, vp_cup, vp_red = engine.precio_bono(F_bono, r_periodo, C_bono, i_periodo_bono, n_periodos_bono)
+        i_final = i_periodo_bono
+        p_final = precio_P
 
         if precio_P > C_bono:
             estado_bono = "Se vende con **PRIMA** (Sobre la par)"
@@ -1386,13 +1393,10 @@ elif opcion == "5. Valuación de Bonos":
         with st.expander("Ver desarrollo paso a paso del cálculo actual"):
             st.info("**1. Cálculo del Cupón Periódico ($Fr$):**")
             st.latex(rf"Fr = {F_bono:,.2f} \times \left(\frac{{{r_nom_bono:.4f}}}{{{m_bono:g}}}\right) = {F_bono:,.2f} \times {r_periodo:.4f} = {cupon_Fr:,.2f}")
-            
             st.info("**2. Sustitución en la Ecuación del Precio:**")
             st.latex(rf"P = {cupon_Fr:,.2f} \left[ \frac{{1 - (1+{str_val_i_mercado})^{{-{n_periodos_bono:g}}}}}{{{str_val_i_mercado}}} \right] + {C_bono:,.2f}(1+{str_val_i_mercado})^{{-{n_periodos_bono:g}}}")
-            
             factor_anualidad = (1 - (1 + i_periodo_bono)**-n_periodos_bono) / i_periodo_bono
             factor_descuento = (1 + i_periodo_bono)**-n_periodos_bono
-            
             st.latex(rf"P = {cupon_Fr:,.2f} [{factor_anualidad:.6f}] + {C_bono:,.2f} ({factor_descuento:.6f})")
             st.latex(rf"P = {vp_cup:,.2f} \text{{ (VP Cupones)}} + {vp_red:,.2f} \text{{ (VP Redención)}}")
             st.success(f"**Precio Final: ${precio_P:,.2f}**")
@@ -1407,6 +1411,8 @@ elif opcion == "5. Valuación de Bonos":
             st.error("No se pudo encontrar una tasa válida para este precio.")
         else:
             i_nom_res = i_periodo_res * m_bono
+            i_final = i_periodo_res
+            p_final = precio_mercado
             
             if precio_mercado > C_bono:
                 estado_bono = "Se vende con **PRIMA** (Tasa Rendimiento < Tasa Cupón)"
@@ -1432,20 +1438,48 @@ elif opcion == "5. Valuación de Bonos":
             with st.expander("Ver desarrollo paso a paso del cálculo actual"):
                 st.info("**1. Estableciendo la Ecuación de Valor:**")
                 st.latex(rf"{precio_mercado:,.2f} = {cupon_Fr:,.2f} \left[ \frac{{1 - (1+i_m)^{{-{n_periodos_bono:g}}}}}{{i_m}} \right] + {C_bono:,.2f}(1+i_m)^{{-{n_periodos_bono:g}}}")
-                
                 st.warning("**Aviso: Cálculo mediante Métodos Numéricos (Newton-Raphson)**")
-                st.markdown("""
-                En esta ecuación, la tasa periódica de rendimiento ($i_m$) se encuentra en el denominador y también en los exponentes de los factores de descuento. 
-                
-                **Al ser un polinomio de grado $nm$, es matemáticamente imposible despejar $i_m$ mediante álgebra tradicional.**
-                
-                Por lo tanto, el motor de la calculadora utiliza algoritmos iterativos de búsqueda de raíces para encontrar el valor exacto de $i_m$ que iguale el lado derecho de la ecuación con el precio de mercado.
-                """)
-                
+                st.markdown("Por ser un polinomio de grado $nm$, es matemáticamente imposible despejar $i_m$ mediante álgebra tradicional.")
                 st.info("**2. Resultados de la iteración:**")
                 st.latex(rf"i_m \approx {i_periodo_res:.6f} \quad ({i_periodo_res*100:.4f}\% \text{{ periódica}})")
                 st.latex(rf"\text{{YTM Anualizada}} = i_m \times {m_bono:g} = {i_nom_res:.6f} \quad ({i_nom_res*100:.4f}\%)")
                 st.success(f"**La tasa de rendimiento al vencimiento (YTM) es {i_nom_res*100:.4f}\% anual.**")
+
+    # ==========================================
+    # ANÁLISIS DE RIESGO DE TASA DE INTERÉS
+    # ==========================================
+    if i_final is not None:
+        st.write("---")
+        st.markdown("### Análisis de Riesgo (Sensibilidad a Tasas)")
+        
+        mac_d, mod_d, conv = engine.riesgo_bono(F_bono, r_periodo, C_bono, i_final, n_periodos_bono, m_bono)
+        
+        c_r1, c_r2, c_r3 = st.columns(3)
+        c_r1.metric("Duración de Macaulay ($D_{Mac}$)", f"{mac_d:.4f} años", help="Tiempo promedio que tardas en recuperar tu inversión.")
+        c_r2.metric("Duración Modificada ($D_{Mod}$)", f"{mod_d:.4f}%", help="Sensibilidad lineal: Cuánto % cae el precio si la tasa sube 1%.")
+        c_r3.metric("Convexidad ($C$)", f"{conv:.4f}", help="Medida de la curvatura. A mayor convexidad, menor riesgo ante caídas.")
+
+        with st.expander("🛠️ Simulador de Estrés del Mercado", expanded=True):
+            st.markdown("¿Qué pasaría con tu dinero si el banco central cambia las tasas de interés mañana mismo?")
+            
+            delta_y_pct = st.slider("Escenario: Las tasas de interés varían en:", min_value=-5.0, max_value=5.0, value=1.0, step=0.1, format="%f%%")
+            delta_y = delta_y_pct / 100.0
+            
+            impacto_duracion = -mod_d * delta_y
+            impacto_convexidad = 0.5 * conv * (delta_y**2)
+            impacto_total_pct = impacto_duracion + impacto_convexidad
+            
+            nuevo_precio_est = p_final * (1 + impacto_total_pct)
+            
+            col_sim1, col_sim2 = st.columns([1, 1])
+            with col_sim1:
+                st.markdown(f"##### Precio Estimado: **${nuevo_precio_est:,.2f}**")
+                variacion = nuevo_precio_est - p_final
+                color_var = "green" if variacion > 0 else "red"
+                st.markdown(f"Impacto monetario: <span style='color:{color_var}; font-weight:bold;'>${variacion:,.2f} ({impacto_total_pct*100:+.2f}%)</span>", unsafe_allow_html=True)
+            with col_sim2:
+                st.latex(r"\frac{\Delta P}{P} \approx -D_{Mod}(\Delta y) + \frac{1}{2}C(\Delta y)^2")
+                st.caption(f"El efecto de la Duración aporta {-mod_d * delta_y * 100:.2f}% y la Convexidad corrige con +{0.5 * conv * (delta_y**2) * 100:.3f}%")
 # =============================================================================
 # 6. VALUACIÓN DE ACCIONES
 # =============================================================================

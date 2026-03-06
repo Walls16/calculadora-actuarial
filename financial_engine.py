@@ -296,14 +296,6 @@ class FinancialMathEngine:
     # 5. VALUACIÓN DE BONOS
     # ==========================================================
     def precio_bono(self, F, r_m, C, i_m, n):
-        """
-        Calcula el precio (Valor Presente) de un bono.
-        F: Valor Nominal (Face value)
-        r_m: Tasa cupón periódica
-        C: Valor de Redención (Monto a pagar al final)
-        i_m: Tasa de rendimiento periódica requerida (Yield)
-        n: Número total de periodos hasta el vencimiento
-        """
         cupon_Fr = F * r_m
         
         # Valor presente de los cupones (Anualidad vencida)
@@ -334,25 +326,46 @@ class FinancialMathEngine:
             except:
                 return np.nan
 
+    def riesgo_bono(self, F, r_periodo, C, i_periodo, n_periodos, m):
+        cupon = F * r_periodo
+        precio = 0.0
+        sum_mac = 0.0
+        sum_conv = 0.0
+        
+        for t in range(1, int(n_periodos) + 1):
+            cf = cupon if t < n_periodos else cupon + C
+            vp_cf = cf / ((1 + i_periodo)**t)
+            
+            precio += vp_cf
+            sum_mac += t * vp_cf
+            sum_conv += t * (t + 1) * vp_cf
+            
+        mac_duration_periodos = sum_mac / precio
+        mac_duration_anios = mac_duration_periodos / m
+        
+        mod_duration_anios = mac_duration_anios / (1 + i_periodo)
+        
+        # 3. Convexidad (en años)
+        convexity_anios = sum_conv / (precio * (m**2) * ((1 + i_periodo)**2))
+        
+        return mac_duration_anios, mod_duration_anios, convexity_anios
+
     # ==========================================================
     # 6. VALUACIÓN DE ACCIONES
     # ==========================================================
     def valuacion_gordon_shapiro(self, D1, k, g):
-        """Valuación por crecimiento constante (Gordon-Shapiro)."""
         if k <= g:
             return None # El modelo no converge si el rendimiento es menor al crecimiento
         precio = D1 / (k - g)
         return precio
 
     def rendimiento_requerido_accion(self, D1, P0, g):
-        """Calcula el rendimiento requerido (k) despejando la fórmula de Gordon."""
         if P0 <= 0:
             return None
         k = (D1 / P0) + g
         return k
 
     def valuacion_multiplos(self, metrica_valor, multiplo_objetivo):
-        """Valuación por múltiplos (P/E, P/S, EV/EBITDA, etc.)."""
         return metrica_valor * multiplo_objetivo
     
     def calcular_vp_dividendos(self, monto_div, m_pagos, r, T_total, capitalizacion="Continua"):
