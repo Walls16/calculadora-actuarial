@@ -1594,10 +1594,6 @@ elif opcion == "6. Valuación de Acciones":
 # 7. PORTAFOLIOS EFICIENTES (MARKOWITZ)
 # =============================================================================
 elif opcion == "7. Portafolios Eficientes":
-    import datetime
-    import plotly.graph_objects as go
-    import plotly.express as px
-    import pandas as pd
 
     st.markdown('<div class="section-header">7. Teoría de Portafolios (Frontera Eficiente)</div>', unsafe_allow_html=True)
     st.markdown("Optimización matemática exacta usando programación cuadrática y datos reales de la bolsa (Yahoo Finance).")
