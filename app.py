@@ -30,9 +30,10 @@ opcion = st.sidebar.radio("Módulos Disponibles", [
     "6. Valuación de Acciones",
     "7. Portafolios Eficientes",
     "8. Riesgo Portafolios",
-    "9. Forwards (Derivados)",
-    "10. Opciones (Derivados)", 
-    "11. Formulario"
+    "9. Forwards",
+    "10. Derivados Vanilla",
+    "11. Derivados Exóticos",
+    "12. Formulario"
 ])
 
 if opcion != "0. Portada e Índice":
@@ -88,7 +89,8 @@ if opcion == "0. Portada e Índice":
 
     with idx3:
         st.warning("**9. Forwards y Futuros**\n\nDeterminación de precios teóricos y valuación de contratos.")
-        st.warning("**10. Opciones (Derivados)**\n\nPrimas y Griegas con Black-Scholes-Merton y Árboles Binomiales (CRR).")
+        st.warning("**10. Derivados Vanilla**\n\nPrimas y Griegas con Black-Scholes-Merton y Árboles Binomiales (CRR).")
+        st.warning("**11. Derivados Exóticos**\n\nValuación de Barrera, Asiáticas, Lookback e Intercambio.")
         st.warning("**11. Formulario Oficial**\n\nCheat-sheet descargable en HTML con todas las ecuaciones matemáticas utilizadas.")
 
 
@@ -1968,7 +1970,7 @@ elif opcion == "8. Riesgo Portafolios":
 # =============================================================================
 # 9. FORWARDS (DERIVADOS)
 # =============================================================================
-elif opcion == "9. Forwards (Derivados)":
+elif opcion == "9. Forwards":
     st.markdown('<div class="section-header">8. Forwards (Precio y Valuación)</div>', unsafe_allow_html=True)
     
     tipo_cap = st.radio("Tipo de Capitalización:", ["Continua", "Discreta"], horizontal=True, key="fwd_cap_global")
@@ -2189,8 +2191,8 @@ elif opcion == "9. Forwards (Derivados)":
 # =============================================================================
 # 10. OPCIONES FINANCIERAS 
 # =============================================================================
-elif opcion == "10. Opciones (Derivados)":
-    st.markdown('<div class="section-header">9. Valuación de Opciones Financieras</div>', unsafe_allow_html=True)
+elif opcion == "10. Derivados Vanilla":
+    st.markdown('<div class="section-header">10. Valuación de Opciones Financieras</div>', unsafe_allow_html=True)
     
     # --- BUSCADOR YAHOO FINANCE (OPCIONAL) ---
     with st.expander("Opcional: Cargar datos reales de mercado (Yahoo Finance)"):
@@ -2502,11 +2504,325 @@ elif opcion == "10. Opciones (Derivados)":
                               showlegend=False, template="plotly_white", margin=dict(l=20, r=20, t=20, b=20), height=500)
             
             st.plotly_chart(fig, use_container_width=True)
+
             st.caption("Los nodos muestran el precio del subyacente (S) y el valor de la prima (V) en ese instante.")
 # =============================================================================
-# 11. FORMULARIO 
+# 11. DERIVADOS EXOTICOS
 # =============================================================================
-elif opcion == "11. Formulario":
+elif opcion == "11. Derivados Exóticos":
+        st.markdown('<div class="section-header">11. Valuación de Derivados Exóticos</div>', unsafe_allow_html=True)
+        st.caption("Valuación avanzada de opciones con características no estándar y dependientes de la trayectoria.")
+        st.write("---")
+
+        tipo_exotica = st.selectbox("Seleccione el modelo a valuar:", [
+            "Opciones Gap",
+            "Binarias (Cash / Asset or Nothing)",
+            "Opciones con Barrera",
+            "Opciones Asiáticas",
+            "Opciones Lookback",
+            "Opciones Compuestas",
+            "Intercambio (U x V)"
+        ])
+        
+        st.write("---")
+
+        # =========================================================
+        # 1. OPCIONES GAP
+        # =========================================================
+        if tipo_exotica == "Opciones Gap":
+            st.markdown("#### Opciones Gap")
+            st.info("El strike de pago ($K_1$) es diferente al strike que detona o activa la opción ($K_2$).")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Precios y Strikes**")
+                S = st.number_input("Precio Spot ($S_0$)", value=90.0, step=1.0)
+                K1 = st.number_input("Strike de Pago ($K_1$)", value=75.0, step=1.0)
+                K2 = st.number_input("Strike Trigger ($K_2$)", value=65.0, step=1.0)
+            with col2:
+                st.markdown("**Tiempo y Tasas**")
+                T = st.number_input("Tiempo ($T$)", value=1.0, step=0.1)
+                r = st.number_input("Tasa Libre de Riesgo ($r$) %", value=1.0, format="%.2f", step=0.1) / 100
+                q = st.number_input("Dividendos ($q$) %", value=0.0, format="%.2f", step=0.1) / 100
+            with col3:
+                st.markdown("**Riesgo**")
+                sigma = st.number_input("Volatilidad ($\sigma$) %", value=20.0, format="%.2f", step=1.0) / 100
+
+            call_gap = engine.opciones_gap(S, K1, K2, T, r, sigma, q, 'call')
+            put_gap = engine.opciones_gap(S, K1, K2, T, r, sigma, q, 'put')
+
+            st.write("---")
+            col_res_call, col_res_put = st.columns(2)
+            with col_res_call:
+                st.markdown(f"<div style='background-color:#E8F5E9; padding:15px; border-radius:10px; border-left: 5px solid #2E7D32;'><h3 style='color:#2E7D32; margin:0;'>Call Gap: ${call_gap:,.4f}</h3></div>", unsafe_allow_html=True)
+            with col_res_put:
+                st.markdown(f"<div style='background-color:#FFEBEE; padding:15px; border-radius:10px; border-left: 5px solid #C62828;'><h3 style='color:#C62828; margin:0;'>Put Gap: ${put_gap:,.4f}</h3></div>", unsafe_allow_html=True)
+
+            with st.expander("Ver desarrollo matemático paso a paso"):
+                d1 = (np.log(S / K2) + (r - q + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+                d2 = d1 - sigma * np.sqrt(T)
+                st.info("**1. Cálculo de parámetros de probabilidad (usando Strike Trigger $K_2$):**")
+                st.latex(rf"d_1 = \frac{{\ln({S} / {K2}) + ({r} - {q} + {sigma}^2/2){T}}}{{{sigma} \sqrt{{{T}}}}} = {d1:.4f}")
+                st.latex(rf"d_2 = {d1:.4f} - {sigma}\sqrt{{{T}}} = {d2:.4f}")
+                
+                st.info("**2. Cálculo de la Prima (usando Strike de Pago $K_1$):**")
+                st.latex(r"c_{gap} = S_0 e^{-qT} N(d_1) - K_1 e^{-rT} N(d_2)")
+                st.latex(r"p_{gap} = K_1 e^{-rT} N(-d_2) - S_0 e^{-qT} N(-d_1)")
+
+        # =========================================================
+        # 2. BINARIAS
+        # =========================================================
+        elif tipo_exotica == "Binarias (Cash / Asset or Nothing)":
+            st.markdown("#### Opciones Binarias (Digitales)")
+            sub_tipo = st.radio("Estilo de Pago (Payoff):", ["Cash-or-Nothing (Paga efectivo)", "Asset-or-Nothing (Paga el activo)"], horizontal=True)
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Precios y Strikes**")
+                S = st.number_input("Precio Spot ($S_0$)", value=25.0, step=1.0)
+                K = st.number_input("Precio de Ejercicio ($K$)", value=27.0, step=1.0)
+                Q = 0.0
+                if "Cash" in sub_tipo:
+                    Q = st.number_input("Pago en Efectivo ($Q$)", value=12.0, step=1.0)
+            with col2:
+                st.markdown("**Tiempo y Tasas**")
+                T = st.number_input("Tiempo a Vencimiento ($T$)", value=1.0, step=0.1)
+                r = st.number_input("Tasa Libre de Riesgo ($r$) %", value=5.0, format="%.2f", step=0.1) / 100
+                q = st.number_input("Tasa de Dividendos ($q$) %", value=2.5, format="%.2f", step=0.1) / 100
+            with col3:
+                st.markdown("**Riesgo**")
+                sigma = st.number_input("Volatilidad ($\sigma$) %", value=42.0, format="%.2f", step=1.0) / 100
+
+            if "Cash" in sub_tipo:
+                call_bin = engine.opciones_cash_or_nothing(S, K, Q, T, r, sigma, q, 'call')
+                put_bin = engine.opciones_cash_or_nothing(S, K, Q, T, r, sigma, q, 'put')
+                nom_tipo = "Cash"
+            else:
+                call_bin = engine.opciones_asset_or_nothing(S, K, T, r, sigma, q, 'call')
+                put_bin = engine.opciones_asset_or_nothing(S, K, T, r, sigma, q, 'put')
+                nom_tipo = "Asset"
+
+            st.write("---")
+            col_res_call, col_res_put = st.columns(2)
+            with col_res_call:
+                st.markdown(f"<div style='background-color:#E8F5E9; padding:15px; border-radius:10px; border-left: 5px solid #2E7D32;'><h3 style='color:#2E7D32; margin:0;'>Call {nom_tipo}: ${call_bin:,.4f}</h3></div>", unsafe_allow_html=True)
+            with col_res_put:
+                st.markdown(f"<div style='background-color:#FFEBEE; padding:15px; border-radius:10px; border-left: 5px solid #C62828;'><h3 style='color:#C62828; margin:0;'>Put {nom_tipo}: ${put_bin:,.4f}</h3></div>", unsafe_allow_html=True)
+
+            with st.expander("Ver desarrollo matemático paso a paso"):
+                d1 = (np.log(S / K) + (r - q + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+                d2 = d1 - sigma * np.sqrt(T)
+                st.info("**1. Cálculo de parámetros de probabilidad:**")
+                st.latex(rf"d_1 = {d1:.4f} \quad ; \quad d_2 = {d2:.4f}")
+                
+                st.info("**2. Cálculo de la Prima:**")
+                if "Cash" in sub_tipo:
+                    st.latex(rf"c_{{cash}} = {Q} e^{{-{r}({T})}} N(d_2)")
+                    st.latex(rf"p_{{cash}} = {Q} e^{{-{r}({T})}} N(-d_2)")
+                else:
+                    st.latex(rf"c_{{asset}} = {S} e^{{-{q}({T})}} N(d_1)")
+                    st.latex(rf"p_{{asset}} = {S} e^{{-{q}({T})}} N(-d_1)")
+
+        # =========================================================
+        # 3. BARRERA
+        # =========================================================
+        elif tipo_exotica == "Opciones con Barrera":
+            st.markdown("#### Opciones con Barrera (Down-and-Out)")
+            st.warning("La opción se desactiva (Knock-out) y pierde su valor si el precio spot cae por debajo de la barrera $H$.")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Parámetros**")
+                S = st.number_input("Precio Spot ($S_0$)", value=100.0, step=1.0)
+                K = st.number_input("Precio de Ejercicio ($K$)", value=100.0, step=1.0)
+                H = st.number_input("Nivel de Barrera ($H$)", value=90.0, step=1.0)
+            with col2:
+                st.markdown("**Condiciones**")
+                T = st.number_input("Tiempo ($T$)", value=1.0, step=0.1)
+                r = st.number_input("Tasa ($r$) %", value=5.0, step=0.1) / 100
+                q = st.number_input("Dividendos ($q$) %", value=0.0, step=0.1) / 100
+            with col3:
+                st.markdown("**Riesgo**")
+                sigma = st.number_input("Volatilidad ($\sigma$) %", value=20.0, step=1.0) / 100
+
+            call_bar = engine.barrera_down_and_out(S, K, H, T, r, sigma, q, 'call')
+            put_bar = engine.barrera_down_and_out(S, K, H, T, r, sigma, q, 'put')
+
+            st.write("---")
+            col_res_call, col_res_put = st.columns(2)
+            with col_res_call:
+                st.markdown(f"<div style='background-color:#E8F5E9; padding:15px; border-radius:10px; border-left: 5px solid #2E7D32;'><h3 style='color:#2E7D32; margin:0;'>Call D&O: ${call_bar:,.4f}</h3></div>", unsafe_allow_html=True)
+            with col_res_put:
+                st.markdown(f"<div style='background-color:#FFEBEE; padding:15px; border-radius:10px; border-left: 5px solid #C62828;'><h3 style='color:#C62828; margin:0;'>Put D&O: ${put_bar:,.4f}</h3></div>", unsafe_allow_html=True)
+
+            with st.expander("Ver desarrollo matemático paso a paso"):
+                lam = (r - q + (sigma**2) / 2) / (sigma**2)
+                y = (np.log(H**2 / (S * K)) / (sigma * np.sqrt(T))) + lam * sigma * np.sqrt(T)
+                st.info("**1. Variables del modelo de Reiner y Rubinstein:**")
+                st.latex(rf"\lambda = \frac{{{r} - {q} + {sigma}^2/2}}{{{sigma}^2}} = {lam:.4f}")
+                st.latex(rf"y = \frac{{\ln({H}^2 / ({S} \times {K}))}}{{{sigma}\sqrt{{{T}}}}} + \lambda\sigma\sqrt{{{T}}} = {y:.4f}")
+                
+                st.info("**2. Cálculo de la Opción Down-and-Out:**")
+                st.latex(r"c_{do} = c_{vanilla} - c_{di} \quad \text{donde:}")
+                st.latex(r"c_{di} = S_0 e^{-qT} \left(\frac{H}{S_0}\right)^{2\lambda} N(y) - K e^{-rT} \left(\frac{H}{S_0}\right)^{2\lambda-2} N(y - \sigma\sqrt{T})")
+
+        # =========================================================
+        # 4. ASIÁTICAS
+        # =========================================================
+        elif tipo_exotica == "Opciones Asiáticas":
+            st.markdown("#### Opciones Asiáticas (Promedio Continuo)")
+            promedio = st.radio("Método de Promedio:", ["Aritmético (Turnbull-Wakeman)", "Geométrico (Kemna-Vorst)"], horizontal=True)
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Parámetros**")
+                S = st.number_input("Precio Spot ($S_0$)", value=50.0, step=1.0)
+                K = st.number_input("Precio de Ejercicio ($K$)", value=50.0, step=1.0)
+            with col2:
+                st.markdown("**Condiciones**")
+                T = st.number_input("Tiempo ($T$)", value=1.0, step=0.1)
+                r = st.number_input("Tasa ($r$) %", value=5.0, step=0.1) / 100
+                q = st.number_input("Dividendos ($q$) %", value=0.0, step=0.1) / 100
+            with col3:
+                st.markdown("**Riesgo**")
+                sigma = st.number_input("Volatilidad ($\sigma$) %", value=30.0, step=1.0) / 100
+
+            if "Aritmético" in promedio:
+                call_as = engine.opciones_asiaticas_aritmeticas(S, K, T, r, sigma, q, 'call')
+                put_as = engine.opciones_asiaticas_aritmeticas(S, K, T, r, sigma, q, 'put')
+            else:
+                call_as = engine.opciones_asiaticas_geometricas(S, K, T, r, sigma, q, 'call')
+                put_as = engine.opciones_asiaticas_geometricas(S, K, T, r, sigma, q, 'put')
+
+            st.write("---")
+            col_res_call, col_res_put = st.columns(2)
+            with col_res_call:
+                st.markdown(f"<div style='background-color:#E8F5E9; padding:15px; border-radius:10px; border-left: 5px solid #2E7D32;'><h3 style='color:#2E7D32; margin:0;'>Call Asiática: ${call_as:,.4f}</h3></div>", unsafe_allow_html=True)
+            with col_res_put:
+                st.markdown(f"<div style='background-color:#FFEBEE; padding:15px; border-radius:10px; border-left: 5px solid #C62828;'><h3 style='color:#C62828; margin:0;'>Put Asiática: ${put_as:,.4f}</h3></div>", unsafe_allow_html=True)
+
+            with st.expander("Ver desarrollo matemático paso a paso"):
+                if "Aritmético" in promedio:
+                    st.info("**Aproximación de Momentos de Turnbull-Wakeman:**")
+                    st.latex(r"M_1 = S_0 \frac{e^{bT} - 1}{bT} \quad ; \quad M_2 = \frac{2S_0^2}{(b+\sigma^2)T^2} \left[ \frac{e^{(2b+\sigma^2)T}-1}{2b+\sigma^2} - \frac{e^{bT}-1}{b} \right]")
+                    st.latex(r"\sigma_{adj} = \sqrt{\frac{1}{T}\ln\left(\frac{M_2}{M_1^2}\right)} \quad ; \quad F = M_1")
+                else:
+                    st.info("**Ajustes exactos de Kemna y Vorst:**")
+                    sigma_adj = sigma / np.sqrt(3.0)
+                    b_adj = 0.5 * ((r-q) - (sigma**2) / 6.0)
+                    st.latex(rf"\sigma_{{adj}} = \frac{{{sigma}}}{{\sqrt{{3}}}} = {sigma_adj:.4f}")
+                    st.latex(rf"b_{{adj}} = \frac{{1}}{{2}}\left(({r}-{q}) - \frac{{{sigma}^2}}{{6}}\right) = {b_adj:.4f}")
+
+        # =========================================================
+        # 5. LOOKBACK
+        # =========================================================
+        elif tipo_exotica == "Opciones Lookback":
+            st.markdown("#### Opciones Lookback (Strike Flotante)")
+            st.info("Permite al Call comprar al mínimo histórico ($S_{min}$) y al Put vender al máximo histórico ($S_{max}$).")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Precios Spot e Históricos**")
+                S = st.number_input("Spot Actual ($S_t$)", value=100.0, step=1.0)
+                # Para mostrar ambos, pedimos S_min y S_max simultáneamente
+                S_min = st.number_input("Precio Mínimo histórico ($S_{min}$) - Para Call", value=90.0, step=1.0)
+                S_max = st.number_input("Precio Máximo histórico ($S_{max}$) - Para Put", value=110.0, step=1.0)
+            with col2:
+                st.markdown("**Condiciones**")
+                T = st.number_input("Tiempo ($T$)", value=0.5, step=0.1)
+                r = st.number_input("Tasa ($r$) %", value=5.0, step=0.1) / 100
+                q = st.number_input("Dividendos ($q$) %", value=0.0, step=0.1) / 100
+            with col3:
+                st.markdown("**Riesgo**")
+                sigma = st.number_input("Volatilidad ($\sigma$) %", value=30.0, step=1.0) / 100
+
+            call_lb = engine.opciones_lookback_flotante(S, S_min, T, r, sigma, q, 'call')
+            put_lb = engine.opciones_lookback_flotante(S, S_max, T, r, sigma, q, 'put')
+
+            st.write("---")
+            col_res_call, col_res_put = st.columns(2)
+            with col_res_call:
+                st.markdown(f"<div style='background-color:#E8F5E9; padding:15px; border-radius:10px; border-left: 5px solid #2E7D32;'><h3 style='color:#2E7D32; margin:0;'>Call Lookback: ${call_lb:,.4f}</h3></div>", unsafe_allow_html=True)
+            with col_res_put:
+                st.markdown(f"<div style='background-color:#FFEBEE; padding:15px; border-radius:10px; border-left: 5px solid #C62828;'><h3 style='color:#C62828; margin:0;'>Put Lookback: ${put_lb:,.4f}</h3></div>", unsafe_allow_html=True)
+
+            with st.expander("Ver base matemática (Goldman, Sosin y Gatto)"):
+                st.info("**Modelo de Strike Flotante (Floating Lookback):**")
+                st.latex(r"c_{fl} = S_0 e^{-qT} N(a_1) - S_0 e^{-qT} \frac{\sigma^2}{2(r-q)} N(-a_1) - S_{min} e^{-rT} \left[ N(a_2) - \frac{\sigma^2}{2(r-q)} e^{Y_1} N(-a_3) \right]")
+                st.latex(r"a_1 = \frac{\ln(S_0 / S_{min}) + (r - q + \sigma^2/2)T}{\sigma\sqrt{T}} \quad ; \quad Y_1 = \frac{-2(r - q - \sigma^2/2) \ln(S_0 / S_{min})}{\sigma^2}")
+
+        # =========================================================
+        # 6. COMPUESTAS Y 7. INTERCAMBIO (Se mantienen estéticas y funcionales)
+        # =========================================================
+        elif tipo_exotica == "Opciones Compuestas":
+            st.markdown("#### Opciones Compuestas")
+            st.info("El activo subyacente de este contrato es otra opción financiera.")
+
+            estilo = st.selectbox("Estructura de la Opción:", ["Call sobre Call", "Put sobre Call", "Call sobre Put", "Put sobre Put"])
+            mapa_estilos = {"Call sobre Call": "call_on_call", "Put sobre Call": "put_on_call", 
+                            "Call sobre Put": "call_on_put", "Put sobre Put": "put_on_put"}
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Opción Madre (Externa)**")
+                K1 = st.number_input("Strike Madre ($K_1$)", value=10.0, step=1.0)
+                T1 = st.number_input("Vencimiento ($T_1$)", value=0.25, step=0.1)
+            with col2:
+                st.markdown("**Opción Subyacente (Interna)**")
+                K2 = st.number_input("Strike Subyacente ($K_2$)", value=12.0, step=1.0)
+                T2 = st.number_input("Vencimiento ($T_2$)", value=0.50, step=0.1)
+            with col3:
+                st.markdown("**Mercado y Activo**")
+                S = st.number_input("Precio Spot ($S_0$)", value=12.0, step=1.0)
+                r = st.number_input("Tasa ($r$) %", value=5.0, step=0.1) / 100
+                q = st.number_input("Dividendos ($q$) %", value=0.0, step=0.1) / 100
+                sigma = st.number_input("Volatilidad ($\sigma$) %", value=24.0, step=1.0) / 100
+
+            precio = engine.opciones_compuestas(S, K1, K2, T1, T2, r, sigma, q, mapa_estilos[estilo])
+
+            st.write("---")
+            st.markdown(f"<div style='background-color:#F3E5F5; padding:15px; border-radius:10px; border-left: 5px solid #7B1FA2;'><h3 style='color:#7B1FA2; margin:0;'>Prima {estilo}: ${precio:,.4f}</h3></div>", unsafe_allow_html=True)
+
+            with st.expander("Ver desarrollo matemático"):
+                st.write("**Búsqueda del Precio Crítico $S^*$:**")
+                st.latex(r"c(S^*, T_2 - T_1) - K_1 = 0")
+                st.write("**Probabilidad Bivariada:**")
+                st.latex(rf"\rho = \sqrt{{T_1 / T_2}} = \sqrt{{{T1}/{T2}}} = {np.sqrt(T1/T2):.4f}")
+
+        elif tipo_exotica == "Intercambio (U x V)":
+            st.markdown("#### Opciones de Intercambio (Margrabe)")
+            st.info("Otorga el derecho a entregar el Activo U para recibir a cambio el Activo V.")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Activo a Entregar (U)**")
+                U = st.number_input("Precio Spot ($U_0$)", value=100.0, step=1.0)
+                sigma_u = st.number_input("Volatilidad ($\sigma_u$) %", value=20.0, step=1.0) / 100
+                q_u = st.number_input("Dividendos ($q_u$) %", value=0.0, step=0.1) / 100
+            with col2:
+                st.markdown("**Activo a Recibir (V)**")
+                V = st.number_input("Precio Spot ($V_0$)", value=100.0, step=1.0)
+                sigma_v = st.number_input("Volatilidad ($\sigma_v$) %", value=25.0, step=1.0) / 100
+                q_v = st.number_input("Dividendos ($q_v$) %", value=0.0, step=0.1) / 100
+            with col3:
+                st.markdown("**Parámetros Conjuntos**")
+                T = st.number_input("Tiempo a Vencimiento ($T$)", value=1.0, step=0.1)
+                rho = st.number_input("Correlación ($\rho$)", value=0.50, step=0.05, min_value=-1.0, max_value=1.0)
+
+            precio = engine.opciones_intercambio_uxv(U, V, q_u, q_v, sigma_u, sigma_v, rho, T)
+
+            st.write("---")
+            st.markdown(f"<div style='background-color:#E8EAF6; padding:15px; border-radius:10px; border-left: 5px solid #3F51B5;'><h3 style='color:#3F51B5; margin:0;'>Prima de Intercambio: ${precio:,.4f}</h3></div>", unsafe_allow_html=True)
+
+            with st.expander("Ver desarrollo matemático"):
+                sigma_comp = np.sqrt(sigma_u**2 + sigma_v**2 - 2*rho*sigma_u*sigma_v)
+                st.latex(rf"\sigma = \sqrt{{{sigma_u}^2 + {sigma_v}^2 - 2({rho})({sigma_u})({sigma_v})}} = {sigma_comp:.4f}")
+                st.latex(r"d_1 = \frac{\ln(V_0 / U_0) + (q_u - q_v + \sigma^2/2)T}{\sigma \sqrt{T}} \quad ; \quad d_2 = d_1 - \sigma\sqrt{T}")
+                st.latex(r"C_{U \times V} = V_0 e^{-q_v T} N(d_1) - U_0 e^{-q_u T} N(d_2)")
+# =============================================================================
+# 12. FORMULARIO 
+# =============================================================================
+elif opcion == "12. Formulario":
     st.markdown('<div class="section-header">Formulario Oficial de Matemáticas Financieras</div>', unsafe_allow_html=True)
     
     st.write("Explora las fórmulas por categoría. Al final de cada pestaña encontrarás un botón para descargar únicamente el formulario de esa sección en formato HTML interactivo.")

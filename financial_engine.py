@@ -1,11 +1,17 @@
+# --- LIBRERÍAS BASE (Matemáticas y Datos) ---
 import numpy as np
 import pandas as pd
-from scipy.optimize import newton
-from scipy.stats import norm
+
+# --- LIBRERÍAS CIENTÍFICAS (SciPy) ---
 import scipy.optimize as opt
+from scipy.optimize import newton, root_scalar
+from scipy.stats import norm, multivariate_normal
+
+# --- LIBRERÍAS FINANCIERAS ---
 import yfinance as yf
 from pypfopt import expected_returns, risk_models
 from pypfopt.efficient_frontier import EfficientFrontier
+
 
 class FinancialMathEngine:
     # ==========================================================
@@ -664,3 +670,252 @@ class FinancialMathEngine:
         vol_p = np.sqrt(np.dot(pesos_array.T, np.dot(S, pesos_array)))
         
         return data, rend_p, vol_p, pesos_array, data.columns
+
+    def opciones_gap(self, S, K1, K2, T, r, sigma, q=0, tipo='call'):
+        d1 = (np.log(S / K2) + (r - q + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+        d2 = d1 - sigma * np.sqrt(T)
+
+        if tipo == 'call':
+            precio = S * np.exp(-q * T) * norm.cdf(d1) - K1 * np.exp(-r * T) * norm.cdf(d2)
+        elif tipo == 'put':
+            precio = K1 * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp(-q * T) * norm.cdf(-d1)
+        else:
+            raise ValueError("El tipo debe ser 'call' o 'put'")
+            
+        return precio
+
+    def opciones_cash_or_nothing(self, S, K, Q, T, r, sigma, q=0, tipo='call'):
+        d1 = (np.log(S / K) + (r - q + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+        d2 = d1 - sigma * np.sqrt(T)
+
+        if tipo == 'call':
+            precio = Q * np.exp(-r * T) * norm.cdf(d2)
+        elif tipo == 'put':
+            precio = Q * np.exp(-r * T) * norm.cdf(-d2)
+        else:
+            raise ValueError("El tipo debe ser 'call' o 'put'")
+            
+        return precio
+
+    def barrera_down_and_out(self, S, K, H, T, r, sigma, q=0, tipo='call'):
+        """Valuación de Opciones con Barrera: Down-and-Out"""
+        if S <= H:
+            return 0.0 
+
+        lam = (r - q + (sigma**2) / 2) / (sigma**2)
+        y = (np.log(H**2 / (S * K)) / (sigma * np.sqrt(T))) + lam * sigma * np.sqrt(T)
+        
+        # ¡Magia! Extraemos call y put de tu función maestra al mismo tiempo
+        vanilla_call, vanilla_put, _, _ = self.opciones_bsm("Yield", S, K, T, r, sigma, extra=q)
+
+        if tipo == 'call':
+            c_di = S * np.exp(-q * T) * (H / S)**(2 * lam) * norm.cdf(y) - K * np.exp(-r * T) * (H / S)**(2 * lam - 2) * norm.cdf(y - sigma * np.sqrt(T))
+            precio = vanilla_call - c_di
+            
+        elif tipo == 'put':
+            p_di = -S * np.exp(-q * T) * (H / S)**(2 * lam) * norm.cdf(-y) + K * np.exp(-r * T) * (H / S)**(2 * lam - 2) * norm.cdf(-y + sigma * np.sqrt(T))
+            precio = vanilla_put - p_di
+            
+        return max(0.0, precio)
+    
+    def opciones_asiaticas_aritmeticas(self, S, K, T, r, sigma, q=0, tipo='call'):
+        b = r - q
+        
+        # 1. Cálculo del Primer Momento (M1) y Segundo Momento (M2)
+        if np.isclose(b, 0.0):
+            # Corrección por la regla de L'Hôpital si b es cero para evitar división entre 0
+            M1 = S
+            M2 = (2 * S**2 / (sigma**2 * T**2)) * ((np.exp(sigma**2 * T) - 1) / sigma**2 - T)
+        else:
+            # Fórmulas estándar de Turnbull-Wakeman
+            M1 = S * (np.exp(b * T) - 1) / (b * T)
+            termino1 = (np.exp((2 * b + sigma**2) * T) - 1) / (2 * b + sigma**2)
+            termino2 = (np.exp(b * T) - 1) / b
+            M2 = (2 * S**2 / ((b + sigma**2) * T**2)) * (termino1 - termino2)
+            
+        # 2. Ajuste de parámetros para meterlos a Black-Scholes
+        F = M1 # El precio Forward asume el valor del primer momento
+        sigma_adj = np.sqrt((1 / T) * np.log(M2 / (M1**2))) # Volatilidad ajustada
+        
+        # 3. D1 y D2 usando el Forward y la volatilidad ajustada
+        d1 = (np.log(F / K) + (sigma_adj**2 / 2) * T) / (sigma_adj * np.sqrt(T))
+        d2 = d1 - sigma_adj * np.sqrt(T)
+        
+        # 4. Cálculo del precio final descontado
+        if tipo == 'call':
+            precio = np.exp(-r * T) * (F * norm.cdf(d1) - K * norm.cdf(d2))
+        elif tipo == 'put':
+            precio = np.exp(-r * T) * (K * norm.cdf(-d2) - F * norm.cdf(-d1))
+        else:
+            raise ValueError("El tipo debe ser 'call' o 'put'")
+            
+        return max(0.0, precio)
+    
+    def opciones_asiaticas_geometricas(self, S, K, T, r, sigma, q=0, tipo='call'):
+        b = r - q # Costo de acarreo (cost of carry)
+        
+        # 1. Ajustes mágicos de Kemna-Vorst
+        sigma_adj = sigma / np.sqrt(3.0)
+        b_adj = 0.5 * (b - (sigma**2) / 6.0)
+        
+        # 2. D1 y D2 con las variables ajustadas
+        d1 = (np.log(S / K) + (b_adj + (sigma_adj**2) / 2.0) * T) / (sigma_adj * np.sqrt(T))
+        d2 = d1 - sigma_adj * np.sqrt(T)
+        
+        # 3. Fórmula de Black-Scholes generalizada
+        if tipo == 'call':
+            precio = S * np.exp((b_adj - r) * T) * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
+        elif tipo == 'put':
+            precio = K * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp((b_adj - r) * T) * norm.cdf(-d1)
+        else:
+            raise ValueError("El tipo debe ser 'call' o 'put'")
+            
+        return max(0.0, precio)
+    
+    def opciones_lookback_flotante(self, S, S_ref, T, r, sigma, q=0, tipo='call'):
+        # Salvavidas matemático: Evita división por cero si r == q
+        if np.isclose(r, q):
+            r_adj = r + 1e-8
+        else:
+            r_adj = r
+
+        if tipo == 'call':
+            Smin = S_ref
+            
+            a1 = (np.log(S / Smin) + (r_adj - q + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+            a2 = a1 - sigma * np.sqrt(T)
+            a3 = (np.log(S / Smin) + (-r_adj + q + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+            
+            Y1 = -2 * (r_adj - q - (sigma**2) / 2) * np.log(S / Smin) / (sigma**2)
+            
+            termino1 = S * np.exp(-q * T) * norm.cdf(a1)
+            termino2 = S * np.exp(-q * T) * (sigma**2 / (2 * (r_adj - q))) * norm.cdf(-a1)
+            termino3 = Smin * np.exp(-r_adj * T) * (norm.cdf(a2) - (sigma**2 / (2 * (r_adj - q))) * np.exp(Y1) * norm.cdf(-a3))
+            
+            precio = termino1 - termino2 - termino3
+            
+        elif tipo == 'put':
+            Smax = S_ref
+            
+            b1 = (np.log(Smax / S) + (-r_adj + q + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+            b2 = b1 - sigma * np.sqrt(T)
+            b3 = (np.log(Smax / S) + (r_adj - q - (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+            
+            Y2 = 2 * (r_adj - q - (sigma**2) / 2) * np.log(Smax / S) / (sigma**2)
+            
+            termino1 = Smax * np.exp(-r_adj * T) * (norm.cdf(b1) - (sigma**2 / (2 * (r_adj - q))) * np.exp(Y2) * norm.cdf(-b3))
+            termino2 = S * np.exp(-q * T) * norm.cdf(b2)
+            termino3 = S * np.exp(-q * T) * (sigma**2 / (2 * (r_adj - q))) * norm.cdf(-b2)
+            
+            precio = termino1 - termino2 + termino3
+            
+        else:
+            raise ValueError("El tipo debe ser 'call' o 'put'")
+            
+        return max(0.0, precio)
+    
+    def _pnbivariada(self, x, y, rho):
+        cov_matrix = [[1, rho], [rho, 1]]
+        bivariada = multivariate_normal(mean=[0, 0], cov=cov_matrix)
+        return bivariada.cdf([x, y])
+    
+
+    def opciones_compuestas(self, S, K1, K2, T1, T2, r, sigma, q=0, tipo='call_on_call'):
+        """Valuación de Opciones Compuestas"""
+        tau = T2 - T1 
+        
+        # 1. Encontrar S* usando tu función maestra (índice 0 es Call, 1 es Put)
+        if 'on_call' in tipo:
+            objetivo = lambda x: self.opciones_bsm("Yield", x, K2, tau, r, sigma, extra=q)[0] - K1
+        else:
+            objetivo = lambda x: self.opciones_bsm("Yield", x, K2, tau, r, sigma, extra=q)[1] - K1
+            
+        try:
+            S_star = root_scalar(objetivo, bracket=[0.001, 10000]).root
+        except ValueError:
+            return 0.0 
+            
+        # 2. Calcular a1, a2, b1, b2 (Esto se queda exactamente igual)
+        a1 = (np.log(S / S_star) + (r - q + (sigma**2) / 2) * T1) / (sigma * np.sqrt(T1))
+        a2 = a1 - sigma * np.sqrt(T1)
+        
+        b1 = (np.log(S / K2) + (r - q + (sigma**2) / 2) * T2) / (sigma * np.sqrt(T2))
+        b2 = b1 - sigma * np.sqrt(T2)
+        
+        rho = np.sqrt(T1 / T2)
+        
+        # 3. Calcular el precio final (Esto se queda exactamente igual)
+        if tipo == 'call_on_call':
+            M1 = self._pnbivariada(a1, b1, rho)
+            M2 = self._pnbivariada(a2, b2, rho)
+            precio = S * np.exp(-q * T2) * M1 - K2 * np.exp(-r * T2) * M2 - K1 * np.exp(-r * T1) * norm.cdf(a2)
+            
+        elif tipo == 'put_on_call':
+            M1 = self._pnbivariada(-a1, b1, -rho)
+            M2 = self._pnbivariada(-a2, b2, -rho)
+            precio = K2 * np.exp(-r * T2) * M2 - S * np.exp(-q * T2) * M1 + K1 * np.exp(-r * T1) * norm.cdf(-a2)
+            
+        elif tipo == 'call_on_put':
+            M1 = self._pnbivariada(-a1, -b1, rho)
+            M2 = self._pnbivariada(-a2, -b2, rho)
+            precio = K2 * np.exp(-r * T2) * M2 - S * np.exp(-q * T2) * M1 - K1 * np.exp(-r * T1) * norm.cdf(-a2)
+            
+        elif tipo == 'put_on_put':
+            M1 = self._pnbivariada(a1, -b1, -rho)
+            M2 = self._pnbivariada(a2, -b2, -rho)
+            precio = S * np.exp(-q * T2) * M1 - K2 * np.exp(-r * T2) * M2 + K1 * np.exp(-r * T1) * norm.cdf(a2)
+            
+        return precio
+
+    def opciones_intercambio_uxv(self, U, V, q_u, q_v, sigma_u, sigma_v, rho, T):
+        # Calculamos la volatilidad conjunta (agregando el 2 en la covarianza)
+        sigma = np.sqrt(sigma_u**2 + sigma_v**2 - 2 * rho * sigma_u * sigma_v)
+        
+        # d1 y d2 ajustados para el intercambio
+        d1 = (np.log(V / U) + (q_u - q_v + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+        d2 = d1 - sigma * np.sqrt(T)
+        
+        # Precio de la opción de intercambio
+        precio = V * np.exp(-q_v * T) * norm.cdf(d1) - U * np.exp(-q_u * T) * norm.cdf(d2)
+        
+        return max(0.0, precio)
+
+
+    def opcion_chooser_simple(self, S, K, T1, T2, r, sigma, q=0):
+        """Valuación de Opción Chooser Simple (As You Like It)"""
+        
+        # 1. Extraemos el Call de T2 (índice 0)
+        c = self.opciones_bsm("Yield", S, K, T2, r, sigma, extra=q)[0]
+        
+        # 2. Extraemos el Put de T1 con Strike descontado (índice 1)
+        K_put = K * np.exp(-(r - q) * (T2 - T1))
+        p = self.opciones_bsm("Yield", S, K_put, T1, r, sigma, extra=q)[1]
+        
+        precio = c + np.exp(-q * (T2 - T1)) * p
+        return precio
+
+    def opciones_asset_or_nothing(self, S, K, T, r, sigma, q=0, tipo='call'):
+        """
+        Valuación de Opciones Binarias: Asset-or-Nothing.
+        Paga el activo subyacente (S) si la opción termina In-The-Money al vencimiento.
+        """
+        # Protección matemática básica
+        if T <= 0 or sigma <= 0:
+            return 0.0
+
+        # Calculamos d1 (Nota: Asset-or-Nothing no necesita d2)
+        d1 = (np.log(S / K) + (r - q + (sigma**2) / 2) * T) / (sigma * np.sqrt(T))
+
+        if tipo == 'call':
+            # Paga S si S > K
+            precio = S * np.exp(-q * T) * norm.cdf(d1)
+        elif tipo == 'put':
+            # Paga S si S < K
+            precio = S * np.exp(-q * T) * norm.cdf(-d1)
+        else:
+            raise ValueError("El tipo debe ser 'call' o 'put'")
+            
+        return max(0.0, precio)
+
+
+
