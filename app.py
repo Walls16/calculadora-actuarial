@@ -2901,11 +2901,11 @@ elif opcion == "12. Formulario":
         st.markdown(r"""
 | Concepto | Fórmula | Para qué se usa |
 | :--- | :---: | :--- |
-| **Vencidas (Periódicas)** | $VF = R \cdot s_{\overline{nm}\|i_m} = R \left[ \frac{\left(1+\frac{i^{(m)}}{m}\right)^{nm} - 1}{\frac{i^{(m)}}{m}} \right]$ | Monto acumulado por depósitos fijos al *final* de cada periodo. |
-| **Anticipadas (Periódicas)** | $VF = R \cdot \ddot{s}_{\overline{nm}\|i_m} = R \left[ \dots \right] \left(1+\frac{i^{(m)}}{m}\right)$ | Monto acumulado por depósitos fijos al *inicio* de cada periodo. |
-| **Vencidas pagaderas $p$ veces** | $VF = R \cdot s_{\overline{np}\|i_p} = R \left[ \frac{\left(1+\frac{i^{(p)}}{p}\right)^{np} - 1}{\frac{i^{(p)}}{p}} \right]$ | Cuando la frecuencia de los pagos difiere de la capitalización original. |
-| **Continuas (Instantánea $\delta$)** | $VF = \bar{R} \cdot \bar{s}_{\overline{n}\|\delta} = \bar{R} \left[ \frac{e^{\delta n} - 1}{\delta} \right]$ | Acumulación de un flujo de caja continuo (dinero ingresando sin pausa). |
-| **Continuas (Efectiva $i$)** | $VF = \bar{R} \cdot \bar{s}_{\overline{n}\|i} = \bar{R} \left[ \frac{(1+i)^n - 1}{\ln(1+i)} \right]$ | Acumulación de un flujo continuo expresado con tasa efectiva anual. |
+| **Vencidas (Periódicas)** | $VF = R \cdot s_{\overline{nm}\ i_m} = R \left[ \frac{\left(1+\frac{i^{(m)}}{m}\right)^{nm} - 1}{\frac{i^{(m)}}{m}} \right]$ | Monto acumulado por depósitos fijos al *final* de cada periodo. |
+| **Anticipadas (Periódicas)** | $VF = R \cdot \ddot{s}_{\overline{nm}\ i_m} = R \left[ \dots \right] \left(1+\frac{i^{(m)}}{m}\right)$ | Monto acumulado por depósitos fijos al *inicio* de cada periodo. |
+| **Vencidas pagaderas $p$ veces** | $VF = R \cdot s_{\overline{np}\ i_p} = R \left[ \frac{\left(1+\frac{i^{(p)}}{p}\right)^{np} - 1}{\frac{i^{(p)}}{p}} \right]$ | Cuando la frecuencia de los pagos difiere de la capitalización original. |
+| **Continuas (Instantánea $\delta$)** | $VF = \bar{R} \cdot \bar{s}_{\overline{n}\ \delta} = \bar{R} \left[ \frac{e^{\delta n} - 1}{\delta} \right]$ | Acumulación de un flujo de caja continuo (dinero ingresando sin pausa). |
+| **Continuas (Efectiva $i$)** | $VF = \bar{R} \cdot \bar{s}_{\overline{n}\ i} = \bar{R} \left[ \frac{(1+i)^n - 1}{\ln(1+i)} \right]$ | Acumulación de un flujo continuo expresado con tasa efectiva anual. |
 | **Crecientes Geométricas ($i_m \neq q_m$)**| $VF = R_1 \left[ \frac{(1+i_m)^{nm} - (1+q_m)^{nm}}{i_m - q_m} \right]$ | Acumulación de pagos que crecen a una tasa porcentual constante $q_m$. |
 | **Crecientes Geométricas ($i_m = q_m$)** | $VF = nm \cdot R_1 (1+i_m)^{nm-1}$ | Caso especial donde la tasa de crecimiento iguala a la tasa de interés. |
 | **Crecientes Aritméticas** | $VF = R_1 \left[ \frac{(1+i_m)^{nm} - 1}{i_m} \right] + \frac{G}{i_m} \left[ \frac{(1+i_m)^{nm} - 1}{i_m} - nm \right]$ | Acumulación de pagos que crecen sumando una cantidad monetaria fija $G$. |
@@ -2915,12 +2915,12 @@ elif opcion == "12. Formulario":
         st.markdown(r"""
 | Concepto | Fórmula | Para qué se usa |
 | :--- | :---: | :--- |
-| **Vencidas (Periódicas)** | $VP = R \cdot a_{\overline{nm}\|i_m} = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]$ | Valor actual de pagos fijos realizados al *final* de cada periodo (ej. préstamos). |
-| **Anticipadas (Periódicas)** | $VP = R \cdot \ddot{a}_{\overline{nm}\|i_m} = R \left[ \dots \right] \left(1+\frac{i^{(m)}}{m}\right)$ | Valor actual de pagos fijos realizados al *inicio* de cada periodo (ej. rentas). |
-| **Perpetuas** | $VP = R \cdot a_{\overline{\infty}\|i_m} = \frac{R}{\frac{i^{(m)}}{m}}$ | Valor actual de un pago fijo que se recibirá para siempre. |
-| **Vencidas pagaderas $p$ veces** | $VP = R \cdot a_{\overline{np}\|i_p} = R \left[ \frac{1 - \left(1+\frac{i^{(p)}}{p}\right)^{-np}}{\frac{i^{(p)}}{p}} \right]$ | Cuando la frecuencia de pago difiere de la frecuencia de capitalización. |
-| **Continuas (Instantánea $\delta$)** | $VP = \bar{R} \cdot \bar{a}_{\overline{n}\|\delta} = \bar{R} \left[ \frac{1 - e^{-\delta n}}{\delta} \right]$ | Valor actual de un flujo de caja ininterrumpido a tasa continua. |
-| **Continuas (Efectiva $i$)** | $VP = \bar{R} \cdot \bar{a}_{\overline{n}\|i} = \bar{R} \left[ \frac{1 - (1+i)^{-n}}{\ln(1+i)} \right]$ | Valor actual de un flujo continuo expresado con tasa efectiva. |
+| **Vencidas (Periódicas)** | $VP = R \cdot a_{\overline{nm}\ i_m} = R \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right]$ | Valor actual de pagos fijos realizados al *final* de cada periodo (ej. préstamos). |
+| **Anticipadas (Periódicas)** | $VP = R \cdot \ddot{a}_{\overline{nm}\ i_m} = R \left[ \dots \right] \left(1+\frac{i^{(m)}}{m}\right)$ | Valor actual de pagos fijos realizados al *inicio* de cada periodo (ej. rentas). |
+| **Perpetuas** | $VP = R \cdot a_{\overline{\infty}\ i_m} = \frac{R}{\frac{i^{(m)}}{m}}$ | Valor actual de un pago fijo que se recibirá para siempre. |
+| **Vencidas pagaderas $p$ veces** | $VP = R \cdot a_{\overline{np}\ i_p} = R \left[ \frac{1 - \left(1+\frac{i^{(p)}}{p}\right)^{-np}}{\frac{i^{(p)}}{p}} \right]$ | Cuando la frecuencia de pago difiere de la frecuencia de capitalización. |
+| **Continuas (Instantánea $\delta$)** | $VP = \bar{R} \cdot \bar{a}_{\overline{n}\ \delta} = \bar{R} \left[ \frac{1 - e^{-\delta n}}{\delta} \right]$ | Valor actual de un flujo de caja ininterrumpido a tasa continua. |
+| **Continuas (Efectiva $i$)** | $VP = \bar{R} \cdot \bar{a}_{\overline{n}\ i} = \bar{R} \left[ \frac{1 - (1+i)^{-n}}{\ln(1+i)} \right]$ | Valor actual de un flujo continuo expresado con tasa efectiva. |
 | **Crecientes Geométricas ($i_m \neq q_m$)**| $VP = R_1 \left[ \frac{1 - \left( \frac{1+q_m}{1+i_m} \right)^{nm}}{i_m - q_m} \right]$ | Valor actual de pagos crecientes porcentualmente (escalonados). |
 | **Crecientes Geométricas ($i_m = q_m$)** | $VP = \frac{nm \cdot R_1}{1+i_m}$ | Caso especial del gradiente geométrico donde $i_m = q_m$. |
 | **Crecientes Aritméticas** | $VP = R_1 \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right] + \frac{G}{i_m} \left[ \dots \right]$ | Valor actual de una serie de pagos que se incrementan en monto fijo $G$. |
@@ -3002,7 +3002,7 @@ elif opcion == "12. Formulario":
         st.markdown(r"""
 | Concepto | Fórmula | Para qué se usa |
 | :--- | :---: | :--- |
-| **Precio del Bono (Notación)** | $P = Fr \cdot a_{\overline{nm}\|i_m} + C(1+i_m)^{-nm}$ | Valuación teórica de un bono sumando el VP de los cupones y el principal. |
+| **Precio del Bono (Notación)** | $P = Fr \cdot a_{\overline{nm}\ i_m} + C(1+i_m)^{-nm}$ | Valuación teórica de un bono sumando el VP de los cupones y el principal. |
 | **Precio del Bono (Efectiva)** | $P = Fr \left[ \frac{1 - \left(1+i_m\right)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}$ | Valuación usando la tasa de rendimiento efectiva del mercado ($i_m$). |
 | **Precio del Bono (Nominal)** | $P = Fr \left[ \frac{1 - \left(1+\frac{i^{(m)}}{m}\right)^{-nm}}{\frac{i^{(m)}}{m}} \right] + C(1+\frac{i^{(m)}}{m})^{-nm}$ | Valuación usando directamente la tasa nominal cotizada en el mercado. |
 | **Yield to Maturity (YTM)** | $P_{mercado} = Fr \left[ \frac{1 - (1+i_m)^{-nm}}{i_m} \right] + C(1+i_m)^{-nm}$ | Ecuación para despejar la tasa de rendimiento $i_m$ iterativamente a partir del precio. |
