@@ -26,7 +26,7 @@ THEMES = {
     # -------------------------------------------------------------------------
     # TEMAS CLAROS (9 Temas)
     # -------------------------------------------------------------------------
-    "Azul & Rosa (Predeterminado)": {
+    "Azul & Rosa": {
         "primary":       "#E84797", "secondary":     "#94C2DA", "accent":        "#E84797",
         "success":       "#4E7CB2", "danger":        "#C62828", "warning":       "#D97706",
         "bg_light":      "#EFE8E0", "border":        "#EAB4CC", "text_muted":    "#64748B",
@@ -230,7 +230,7 @@ THEMES = {
     }
 }
 
-_DEFAULT_THEME = "Azul & Rosa (Predeterminado)"
+_DEFAULT_THEME = "Azul Clasico"
 
 # =============================================================================
 # SELECTOR DE TEMA
