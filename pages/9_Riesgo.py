@@ -239,22 +239,21 @@ with tab_cm:
     # SUB-TABS
     # ──────────────────────────────────────────────────────────────────────────
     from credit_engine import NR_METHODS
+    _NR_OPTS = ["raw_with_d", "redistribute"]
     col_opt1, col_opt2 = st.columns(2)
     with col_opt1:
         nr_mode = st.selectbox(
             "Tratamiento de NR (Not Rated):",
-            list(NR_METHODS.keys()),
-            index=0,  # raw_with_d por defecto → replica Excel
+            _NR_OPTS,
+            index=0,
             format_func=lambda x: NR_METHODS[x],
             key="cm_nr_mode",
             help="Controla cómo se manejan las probabilidades NR de la matriz S&P.",
         )
     with col_opt2:
         _mode_info = {
-            "raw_with_d":       "⭐ **Método Excel/libro** — probabilidades S&P crudas (AAA..D). Las filas NO suman 1; NR se excluye. Replica exactamente los resultados del ejercicio.",
-            "redistribute":     "Filas suman 1.0. NR redistribuido proporcionalmente (uso profesional).",
-            "simple_normalize": "Filas suman 1.0. NR descartado; cols AAA..D escaladas proporcionalmente.",
-            "raw_no_d_nr":      "Filas NO suman 1.0 — matriz clásica de libro. D y NR ignorados completamente.",
+            "raw_with_d":   "Probabilidades S&P crudas (AAA..D). NR se excluye.",
+            "redistribute": "Filas suman 1.0. NR redistribuido proporcionalmente.",
         }
         themed_info(_mode_info[nr_mode])
 
@@ -410,131 +409,184 @@ with tab_cm:
         )
         st.plotly_chart(fig_hm, use_container_width=True)
 
+    # ── HELPERS: curva de tasas automática ───────────────────────────────────
+    # Spreads planos por defecto = diferencia entre all-in año-1 y tesoro año-1
+    _DEFAULT_SPREADS_FLAT = DEFAULT_SPREADS[:17, 0] - DEFAULT_TREASURY[0]  # (17,)
+
+    def _default_tsy_anchors(max_t: int) -> np.ndarray:
+        """Treasury en años enteros 1..max_t. Usa DEFAULT_TREASURY hasta donde alcance."""
+        v = np.full(max_t, DEFAULT_TREASURY[-1])
+        v[:min(max_t, len(DEFAULT_TREASURY))] = DEFAULT_TREASURY[:min(max_t, len(DEFAULT_TREASURY))]
+        return v
+
+    def _build_allin_table(max_t: int) -> tuple:
+        """
+        Genera la tabla all-in (17, n_tenors) y el vector de tenores.
+
+        - Tenores: cada 0.5 años desde 0.5 hasta max_t (cubre pagos anuales y semestrales).
+          Para frecuencias mayores (trimestral, mensual) la función de descuento
+          usa el tenor más cercano disponible, que con 0.5 de paso es suficientemente preciso.
+        - Interpolación lineal con origen en (0, 0):
+            all_in(r, t) = interp([0,1,...,max_t], [0, tsy1+spr, tsy2+spr, ...], t)
+          Esto replica exactamente la convención del Excel (columna 0.5 = año1/2).
+        """
+        tsy  = st.session_state.get("cm_tsy_anchors", _default_tsy_anchors(max_t))
+        spr  = st.session_state.get("cm_spreads_flat", _DEFAULT_SPREADS_FLAT.copy())
+        # Asegurar longitud correcta
+        if len(tsy) < max_t:
+            tsy = np.append(tsy, np.full(max_t - len(tsy), tsy[-1]))
+        tenors = np.arange(0.5, max_t + 0.01, 0.5)           # [0.5, 1.0, ..., max_t]
+        anchor_x = np.array([0] + list(range(1, max_t + 1)))  # [0, 1, 2, ..., max_t]
+        allin = np.zeros((17, len(tenors)))
+        for r_idx in range(17):
+            anchor_y = np.array([0.0] + [tsy[y] + spr[r_idx] for y in range(max_t)])
+            allin[r_idx] = np.interp(tenors, anchor_x, anchor_y)
+        # Row 17 = D (placeholder NaN, handled by bond_values_per_rating)
+        full = np.vstack([allin, np.full((1, len(tenors)), np.nan)])  # (18, n_tenors)
+        return full, tenors
+
     # ── ST3: CURVA DE TASAS ───────────────────────────────────────────────────
     with st3:
-        st.markdown("#### Curva de Tasas del Tesoro y Tasas por Calificación")
+        st.markdown("#### Curva de Tasas")
         themed_info(
-            "Tasas **todo-incluido** (Treasury + spread) usadas para descontar los flujos del bono "
-            "según la **nueva calificación** al final del año. "
-            "Basadas en datos de mercado de EE.UU. Puedes editarlas directamente."
+            "Ingresa la **tasa libre de riesgo** (tesoro) para cada año de vencimiento "
+            "y el **spread** por calificación crediticia. "
+            "El motor genera automáticamente las tasas para todos los tenores intermedios "
+            "por interpolación lineal — no tienes que llenar ninguna tabla extra."
         )
 
         _bond_ps = st.session_state.get("cm_bparams", [])
         _max_T   = min(max((b["T"] for b in _bond_ps), default=5), 10)
-        _prev_maxT = st.session_state.get("cm_max_T_prev", 0)
         _n_spr_rows = min(17, _N_STATES)
 
-        def _make_tsy(max_t):
-            v = np.full(max_t, DEFAULT_TREASURY[-1])
-            v[:min(max_t, len(DEFAULT_TREASURY))] = DEFAULT_TREASURY[:min(max_t, len(DEFAULT_TREASURY))]
-            return v
+        # Inicializar o ajustar longitud de tesoro si max_T cambió
+        if "cm_tsy_anchors" not in st.session_state:
+            st.session_state["cm_tsy_anchors"] = _default_tsy_anchors(_max_T)
+        else:
+            old_t = st.session_state["cm_tsy_anchors"]
+            if len(old_t) != _max_T:
+                new_t = _default_tsy_anchors(_max_T)
+                new_t[:min(_max_T, len(old_t))] = old_t[:min(_max_T, len(old_t))]
+                st.session_state["cm_tsy_anchors"] = new_t
 
-        def _make_spr(max_t):
-            s = np.zeros((DEFAULT_SPREADS.shape[0], max_t))
-            c = min(max_t, DEFAULT_SPREADS.shape[1])
-            s[:, :c] = DEFAULT_SPREADS[:, :c]
-            if max_t > DEFAULT_SPREADS.shape[1]:
-                for _ci in range(DEFAULT_SPREADS.shape[1], max_t):
-                    s[:, _ci] = DEFAULT_SPREADS[:, -1]
-            return s
+        if "cm_spreads_flat" not in st.session_state:
+            st.session_state["cm_spreads_flat"] = _DEFAULT_SPREADS_FLAT.copy()
 
-        if "cm_tsy" not in st.session_state:
-            st.session_state["cm_tsy"] = _make_tsy(_max_T)
-        elif _prev_maxT != _max_T:
-            old_v = st.session_state["cm_tsy"]
-            new_v = _make_tsy(_max_T)
-            new_v[:min(_max_T, len(old_v))] = old_v[:min(_max_T, len(old_v))]
-            st.session_state["cm_tsy"] = new_v
+        col3a, col3b = st.columns([1, 2])
 
-        if "cm_spr" not in st.session_state:
-            st.session_state["cm_spr"] = _make_spr(_max_T)
-        elif _prev_maxT != _max_T:
-            old_s = st.session_state["cm_spr"]
-            new_s = _make_spr(_max_T)
-            oc = min(old_s.shape[1], _max_T)
-            new_s[:, :oc] = old_s[:, :oc]
-            st.session_state["cm_spr"] = new_s
-
-        st.session_state["cm_max_T_prev"] = _max_T
-        _year_cols = [f"Año {i+1}" for i in range(_max_T)]
-
-        if _max_T < 5:
-            themed_info(
-                f"Duración máxima de tus bonos: **{_max_T} año(s)**. "
-                "La tabla de tasas se ajusta automáticamente."
-            )
-
-        col3a, col3b = st.columns([1, 3])
+        # ── Columna izquierda: tesoro ────────────────────────────────────────
         with col3a:
-            st.markdown(f"**Tesoro — {_max_T} año(s)**")
-            df_t = pd.DataFrame({
-                "Año": list(range(1, _max_T+1)),
-                "Yield (%)": (st.session_state["cm_tsy"]*100).round(4),
+            st.markdown("##### Tasa libre de riesgo (tesoro)")
+            st.caption("Un valor por año de vencimiento.")
+            df_tsy = pd.DataFrame({
+                "Año": list(range(1, _max_T + 1)),
+                "Tasa (%)": (st.session_state["cm_tsy_anchors"] * 100).round(4),
             })
-            ed_t = st.data_editor(
-                df_t, hide_index=True, use_container_width=True,
+            ed_tsy = st.data_editor(
+                df_tsy, hide_index=True, use_container_width=True,
                 column_config={
-                    "Año": st.column_config.NumberColumn(disabled=True),
-                    "Yield (%)": st.column_config.NumberColumn(format="%.4f", step=0.001),
-                }
+                    "Año":      st.column_config.NumberColumn(disabled=True),
+                    "Tasa (%)": st.column_config.NumberColumn(
+                        format="%.4f%%", step=0.01, min_value=0.0),
+                },
             )
-            st.session_state["cm_tsy"] = ed_t["Yield (%)"].values / 100
-            if st.button("Restaurar tasas por defecto", key="cm_rst_spr"):
-                st.session_state.pop("cm_tsy", None)
-                st.session_state.pop("cm_spr", None)
-                st.session_state.pop("cm_max_T_prev", None)
+            st.session_state["cm_tsy_anchors"] = ed_tsy["Tasa (%)"].values / 100
+
+            if st.button("Restaurar tasas US por defecto", key="cm_rst_rates"):
+                st.session_state.pop("cm_tsy_anchors", None)
+                st.session_state.pop("cm_spreads_flat", None)
                 st.rerun()
 
+        # ── Columna derecha: spread por rating ───────────────────────────────
         with col3b:
-            st.markdown(f"**Tasas todo-incluido por calificación — {_max_T} año(s)**")
-            st.caption("Tasa = Treasury + spread. Se usan para descontar flujos según nueva calificación.")
-            df_s = pd.DataFrame(
-                st.session_state["cm_spr"][:_n_spr_rows] * 100,
-                index=RATINGS[:_n_spr_rows],
-                columns=_year_cols,
+            st.markdown("##### Spread crediticio por calificación")
+            st.caption("Un solo valor por rating — se aplica igual a todos los plazos.")
+            df_spr = pd.DataFrame({
+                "Rating":     RATINGS[:_n_spr_rows],
+                "Spread (%)": (st.session_state["cm_spreads_flat"][:_n_spr_rows] * 100).round(4),
+            })
+            ed_spr = st.data_editor(
+                df_spr, hide_index=True, use_container_width=True,
+                height=min(38 + _n_spr_rows * 35, 630),
+                column_config={
+                    "Rating":     st.column_config.TextColumn(disabled=True),
+                    "Spread (%)": st.column_config.NumberColumn(
+                        format="%.4f%%", step=0.01, min_value=0.0),
+                },
             )
-            df_s.index.name = "Rating"
-            ed_s = st.data_editor(
-                df_s.round(4), use_container_width=True,
-                height=min(30 + _n_spr_rows * 35, 560),
-                column_config={c: st.column_config.NumberColumn(
-                    c, format="%.4f", step=0.001) for c in _year_cols}
-            )
-            nspr = st.session_state["cm_spr"].copy()
-            nspr[:_n_spr_rows] = ed_s.values / 100
-            st.session_state["cm_spr"] = nspr
+            new_spr = st.session_state["cm_spreads_flat"].copy()
+            new_spr[:_n_spr_rows] = ed_spr["Spread (%)"].values / 100
+            st.session_state["cm_spreads_flat"] = new_spr
 
+        # ── Vista previa: tabla all-in generada automáticamente ───────────────
+        separador()
+        allin_preview, tenors_preview = _build_allin_table(_max_T)
+        tenor_labels = [f"t={t:.1f}" for t in tenors_preview]
+
+        with st.expander("Ver tabla all-in generada (tesoro + spread)", expanded=False):
+            st.caption(
+                "Tasa all-in = Tesoro(t) + Spread(rating). "
+                "Interpolación lineal con origen en cero — replica la convención del Excel."
+            )
+            df_preview = pd.DataFrame(
+                allin_preview[:_n_spr_rows] * 100,
+                index=RATINGS[:_n_spr_rows],
+                columns=tenor_labels,
+            ).reset_index()
+            st.dataframe(
+                df_preview,
+                use_container_width=True,
+                hide_index=True,
+                height=min(38 + _n_spr_rows * 35, 560),
+                column_config={
+                    "Rating": st.column_config.TextColumn(),
+                    **{c: st.column_config.NumberColumn(format="%.4f%%") for c in tenor_labels}
+                },
+            )
+
+        # ── Gráfica de curvas ─────────────────────────────────────────────────
         c_th = get_current_theme()
         fig_yc = go.Figure()
+        tsy_line = np.interp(
+            tenors_preview,
+            [0] + list(range(1, _max_T + 1)),
+            [0] + list(st.session_state["cm_tsy_anchors"])
+        )
         fig_yc.add_trace(go.Scatter(
-            x=list(range(1,_max_T+1)), y=(st.session_state["cm_tsy"]*100).tolist(),
+            x=tenors_preview.tolist(), y=(tsy_line * 100).tolist(),
             name="Tesoro (rf)", mode="lines+markers",
             line=dict(color=c_th["primary"], width=3, dash="dash"),
         ))
-        for r_name, r_row in zip(RATINGS[:_n_spr_rows], st.session_state["cm_spr"][:_n_spr_rows]):
-            if r_name in ["AAA","AA","A","BBB","BB","B","CCC/C"]:
+        for r_name, r_row in zip(RATINGS[:_n_spr_rows], allin_preview[:_n_spr_rows]):
+            if r_name in ["AAA", "AA", "A", "BBB", "BB", "B", "CCC/C"]:
                 fig_yc.add_trace(go.Scatter(
-                    x=list(range(1,_max_T+1)), y=(r_row[:_max_T]*100).tolist(),
-                    name=r_name, mode="lines", opacity=0.75,
+                    x=tenors_preview.tolist(), y=(r_row * 100).tolist(),
+                    name=r_name, mode="lines", opacity=0.8,
                 ))
         fig_yc.update_layout(
-            title="Curvas de rendimiento por calificación",
-            xaxis_title="Plazo (años)", yaxis_title="Tasa (%)",
-            height=380, **plotly_theme(),
+            title="Curvas de rendimiento all-in por calificación",
+            xaxis_title="Plazo (años)", yaxis_title="Tasa all-in (%)",
+            height=400, **plotly_theme(),
         )
         st.plotly_chart(fig_yc, use_container_width=True)
 
-    # Helper para obtener los datos de bonos con valores calculados
+    # ── HELPER: datos de bonos con valores calculados ─────────────────────────
     def _get_bond_data():
-        params  = st.session_state.get("cm_bparams", [])
-        spr     = st.session_state.get("cm_spr", DEFAULT_SPREADS)
-        mode    = st.session_state.get("cm_nr_mode", "redistribute")
-        inc_d   = (mode != "raw_no_d_nr")
+        params = st.session_state.get("cm_bparams", [])
+        mode   = st.session_state.get("cm_nr_mode", "redistribute")
+        inc_d  = (mode != "raw_no_d_nr")
+        if not params:
+            return []
+        max_t  = max(b["T"] for b in params)
+        allin, tenors = _build_allin_table(max_t)
         out = []
         for bp in params:
-            vals = bond_values_per_rating(bp["VN"], bp["cupon_pct"], bp["T"],
-                                          bp["pagos"], bp["recov"], spr,
-                                          include_d=inc_d)
+            vals = bond_values_per_rating(
+                bp["VN"], bp["cupon_pct"], bp["T"],
+                bp["pagos"], bp["recov"], allin,
+                include_d=inc_d,
+                spread_times=tenors,
+            )
             out.append({**bp, "values": vals})
         return out
 
@@ -720,17 +772,31 @@ with tab_cm:
             # ── Tabla completa de distribución ──────────────────────────────
             st.markdown("##### Tabla de distribución completa")
             df_fd = pd.DataFrame({
-                "Valor ($)":       vals_a,
-                "Probabilidad (%)": probs_a*100,
-                "CDF (%)":          cum_a*100,
+                "Valor ($)":           vals_a,
+                "Probabilidad (%)":    probs_a * 100,
+                "CDF (%)":             cum_a * 100,
                 "Pérdida vs E[V] ($)": ev - vals_a,
-            }).sort_values("Valor ($)", ascending=False)
+            }).sort_values("Valor ($)", ascending=False).reset_index(drop=True)
+
+            _MAX_ROWS_DISPLAY = 5_000
+            df_show = df_fd.head(_MAX_ROWS_DISPLAY)
+            if len(df_fd) > _MAX_ROWS_DISPLAY:
+                themed_info(
+                    f"Mostrando las primeras **{_MAX_ROWS_DISPLAY:,}** filas de "
+                    f"**{len(df_fd):,}** escenarios. "
+                    "Descarga el Excel para ver la distribución completa."
+                )
             st.dataframe(
-                df_fd.style.format({
-                    "Valor ($)":"${:,.4f}", "Probabilidad (%)":"{:.6f}%",
-                    "CDF (%)":"{:.4f}%", "Pérdida vs E[V] ($)":"${:,.4f}",
-                }),
-                use_container_width=True, height=400,
+                df_show,
+                use_container_width=True,
+                height=400,
+                hide_index=True,
+                column_config={
+                    "Valor ($)":           st.column_config.NumberColumn(format="$%.4f"),
+                    "Probabilidad (%)":    st.column_config.NumberColumn(format="%.6f%%"),
+                    "CDF (%)":             st.column_config.NumberColumn(format="%.4f%%"),
+                    "Pérdida vs E[V] ($)": st.column_config.NumberColumn(format="$%.4f"),
+                },
             )
             st.session_state["cm_df_dist"] = df_fd
 
@@ -774,7 +840,6 @@ with tab_cm:
                 "Simulaciones:", options=[10_000,50_000,100_000,200_000],
                 value=50_000, key="cm_sims5",
             )
-            seed5 = st.number_input("Semilla:", min_value=0, value=42, key="cm_seed5")
 
             st.markdown("##### Umbrales N⁻¹ por bono")
             tm5 = st.session_state.get("cm_tm", DEFAULT_TM)
@@ -798,7 +863,7 @@ with tab_cm:
                 sims5 = gaussian_copula_simulation(
                     bd_c, st.session_state.get("cm_tm", DEFAULT_TM),
                     st.session_state["cm_corrm"],
-                    n_sims=n_sims5, seed=int(seed5),
+                    n_sims=n_sims5, seed=None,
                 )
                 # Obtener E[V] y σ de la simulación, luego VaR paramétrico
                 vc5_raw = var_cvar_from_simulations(sims5, CONF_LEVELS)
@@ -945,21 +1010,41 @@ with tab_cm:
 
                 # Sheet 3: Rates
                 ws3 = wb.create_sheet("3 Tasas")
-                ws3.cell(row=1, column=1, value="Treasury Yield").font = Font(bold=True)
-                for j, yr in enumerate([1,2,3,4,5], 2):
-                    hdr(ws3, 1, j, f"Año {yr}"); ws3.column_dimensions[get_column_letter(j)].width = 12
-                tsy_x = st.session_state.get("cm_tsy", DEFAULT_TREASURY)
-                ws3.cell(row=2, column=1, value="rf").font = Font(bold=True)
+                _bp_x   = st.session_state.get("cm_bparams", [])
+                _maxT_x = min(max((b["T"] for b in _bp_x), default=5), 10) if _bp_x else 5
+                tsy_x   = st.session_state.get("cm_tsy_anchors", _default_tsy_anchors(_maxT_x))
+                spr_x   = st.session_state.get("cm_spreads_flat", _DEFAULT_SPREADS_FLAT.copy())
+                allin_x, tenors_x = _build_allin_table(_maxT_x)
+
+                # Treasury row
+                hdr(ws3, 1, 1, "Tasa libre de riesgo (tesoro)", FIL2)
+                for j, yr in enumerate(range(1, _maxT_x + 1), 2):
+                    hdr(ws3, 1, j, f"Año {yr}")
+                    ws3.column_dimensions[get_column_letter(j)].width = 11
+                ws3.column_dimensions["A"].width = 28
                 for j, v in enumerate(tsy_x, 2):
-                    ws3.cell(row=2, column=j, value=float(v)).number_format="0.0000%"
-                ws3.cell(row=4, column=1, value="Spreads all-in").font = Font(bold=True)
-                for j, yr in enumerate([1,2,3,4,5], 2):
-                    hdr(ws3, 5, j, f"Año {yr}")
-                spr_x = st.session_state.get("cm_spr", DEFAULT_SPREADS)
-                for i, rn in enumerate(RATINGS[:N_R-1]):
-                    ws3.cell(row=i+6, column=1, value=rn).font = Font(bold=True)
-                    for j, v in enumerate(spr_x[i], 2):
-                        ws3.cell(row=i+6, column=j, value=float(v)).number_format="0.0000%"
+                    ws3.cell(row=2, column=j, value=float(v)).number_format = "0.0000%"
+
+                # Flat spreads
+                hdr(ws3, 4, 1, "Spread crediticio (plano por rating)", FIL2)
+                hdr(ws3, 4, 2, "Spread (%)")
+                ws3.column_dimensions["B"].width = 14
+                for i, (rn, sv) in enumerate(zip(RATINGS[:_n_spr_rows], spr_x[:_n_spr_rows]), 5):
+                    ws3.cell(row=i, column=1, value=rn).font = Font(bold=True)
+                    ws3.cell(row=i, column=2, value=float(sv)).number_format = "0.0000%"
+
+                # All-in table (generated)
+                _t_start_row = 5 + _n_spr_rows + 1
+                hdr(ws3, _t_start_row, 1, "Tabla all-in generada (tesoro + spread)", FIL2)
+                t_lbls = [f"t={t:.1f}" for t in tenors_x]
+                for j, lbl in enumerate(t_lbls, 2):
+                    hdr(ws3, _t_start_row, j, lbl)
+                    ws3.column_dimensions[get_column_letter(j)].width = 9
+                for i, (rn, row_vals) in enumerate(
+                        zip(RATINGS[:_n_spr_rows], allin_x[:_n_spr_rows]), _t_start_row + 1):
+                    ws3.cell(row=i, column=1, value=rn).font = Font(bold=True)
+                    for j, v in enumerate(row_vals, 2):
+                        ws3.cell(row=i, column=j, value=float(v)).number_format = "0.0000%"
 
                 # Sheet 4: Individual bond values
                 ws4 = wb.create_sheet("4 Valores Bonos")

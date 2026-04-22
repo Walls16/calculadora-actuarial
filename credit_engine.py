@@ -103,8 +103,8 @@ DEFAULT_TREASURY = np.array([0.0365, 0.0357, 0.0358, 0.03635, 0.0369])
 # =============================================================================
 
 NR_METHODS = {
-    "raw_with_d":       "Excel clásico — S&P crudas (AAA..D), filas NO suman 1 (NR excluido)",
-    "redistribute":     "Redistribuir NR proporcionalmente (uso profesional)",
+    "raw_with_d":       "Excel clásico — S&P crudas (AAA..D)",
+    "redistribute":     "Redistribuir NR proporcionalmente",
     "simple_normalize": "Normalizar sin NR — escala simple (ejercicio clasico)",
     "raw_no_d_nr":      "Sin normalizar — ignorar D y NR, usar crudas AAA..CCC/C",
 }
@@ -429,7 +429,7 @@ def scale_var_cvar(results: dict,
 def gaussian_copula_simulation(bonds_data: list, trans_mat: np.ndarray,
                                 corr_mat: np.ndarray,
                                 n_sims: int = 50_000,
-                                seed: int = 42) -> np.ndarray:
+                                seed: int = None) -> np.ndarray:
     """
     Cópula Gaussiana Monte Carlo para el caso correlacionado.
 
@@ -439,7 +439,7 @@ def gaussian_copula_simulation(bonds_data: list, trans_mat: np.ndarray,
     trans_mat  : (18, 18) matriz de transición normalizada
     corr_mat   : (n, n) matriz de correlación entre activos (proxy accionaria)
     n_sims     : número de simulaciones
-    seed       : semilla aleatoria
+    seed       : semilla aleatoria (None = aleatorio en cada ejecución)
 
     Devuelve
     --------
